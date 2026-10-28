@@ -12,11 +12,15 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class AiException(message: String, val kind: Kind, val retryable: Boolean) : Exception(message) {
-    enum class Kind { NO_KEY, AUTH, QUOTA, NETWORK, TIMEOUT, BLOCKED, BAD_RESPONSE, MODEL_NOT_FOUND, SERVER }
+    enum class Kind { NO_KEY, AUTH, QUOTA, NETWORK, TIMEOUT, BLOCKED, BAD_RESPONSE, MODEL_NOT_FOUND, SERVER,
+        /** Backend not deployed / owner credentials missing or rejected: an operator problem, not the user's. */ SERVICE_SETUP,
+        /** The owner's provider quota/billing is exhausted. */ SERVICE_LIMIT }
 }
 
 /**
- * Talks to Gemini generateContent over REST. If a proxy URL is configured, the same request body is
+ * Builds Gemini generateContent bodies (sent to the Kissa backend by [BackendClient.chat]) and parses responses.
+ * Direct calls with a key are ONLY used by the hidden developer override in debug builds; release builds never
+ * hold a provider key. Talks to Gemini generateContent over REST. If a proxy URL is configured, the same request body is
  * POSTed to `<proxy>/generate?model=<model>` and the key is NOT sent from the device (the proxy holds it).
  */
 class GeminiClient(private val http: OkHttpClient = defaultHttp()) {

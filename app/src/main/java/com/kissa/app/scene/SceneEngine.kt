@@ -14,6 +14,7 @@ class Actor(val id: String, var appearance: Appearance, val isPlayer: Boolean, v
     var targetX = homeX
     var baseFacing = if (isPlayer) 1f else -1f
     var emotion = Emotion.NEUTRAL
+    var prevEmotion = Emotion.NEUTRAL
     var targetExpr = Expr()
     var gesture = Gesture.NONE
     var gestureStart = 0f
@@ -33,7 +34,7 @@ class Actor(val id: String, var appearance: Appearance, val isPlayer: Boolean, v
     private val range = if (isPlayer) 0.16f..0.38f else 0.62f..0.84f
 
     fun setEmotion(e: Emotion, now: Float) {
-        if (e != emotion) markStart = now
+        if (e != emotion) { markStart = now; prevEmotion = emotion }
         emotion = e
         targetExpr = Expr.of(e)
     }
@@ -78,6 +79,12 @@ class SceneEngine(val setting: SettingId, playerApp: Appearance, npcSpec: Charac
     var zoom = 1f; private set
     var focusId: String? = null
     var reduceMotion = false
+
+    /** Cinematic editor: which shot is on screen (close-up / OTS / medium / wide), cut by who speaks and events. */
+    val director = ShotDirector(npcSpec.id)
+    /** VHS rewind effect strength 0..1 (after the player rewinds a bad turn). */
+    var vhs = 0f; private set
+    private var vhsUntil = -1f
 
     // environment
     var rain = if (setting == SettingId.STREET) 1f else 0f; private set
@@ -138,7 +145,8 @@ class SceneEngine(val setting: SettingId, playerApp: Appearance, npcSpec: Charac
         if (withWalk) {
             player.x = -0.25f; player.targetX = player.homeX
             npc.turnAwayUntil = time + 2.4f
-        }
+            director.intro(time)
+        } else director.reset(time)
         focusId = null
     }
 
@@ -153,7 +161,15 @@ class SceneEngine(val setting: SettingId, playerApp: Appearance, npcSpec: Charac
     fun fadeOutIn() { fade = 0f; fadeTarget = 1f; pendingFadeBack = true }
     private var pendingFadeBack = false
 
+    /** Plays the VHS rewind (grayscale, scanlines, tracking jitter) and returns the camera to a calm close-up. */
+    fun rewindFx(seconds: Float = 1.5f) {
+        vhsUntil = time + seconds
+        npc.visible = true; npc.x = npc.homeX; npc.targetX = npc.homeX
+        director.reset(time + seconds)
+    }
+
     fun event(e: SceneEvent) {
+        director.onEvent(e, time)
         when (e) {
             SceneEvent.LIGHT_FLICKER -> flickerUntil = time + 1.6f
             SceneEvent.CROWD_PASSES -> repeat(4) { i -> spawnSilhouette(near = true, offset = i * 0.18f) }
@@ -213,6 +229,9 @@ class SceneEngine(val setting: SettingId, playerApp: Appearance, npcSpec: Charac
         flash = max(0f, flash - dt * 1.4f)
         fade += (fadeTarget - fade) * (1f - exp(-dt * 3f))
         if (pendingFadeBack && fade > 0.97f) { pendingFadeBack = false; fadeTarget = 0f }
+
+        vhs = if (t < vhsUntil) 1f else max(0f, vhs - dt * 3f)
+        director.update(t, speaking?.speakerId ?: focusId, npc.thinkingTarget > 0.5f)
 
         updateParticles(dt, t)
         updateSilhouettes(dt)

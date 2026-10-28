@@ -7,6 +7,10 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import com.kissa.app.ai.AiException
+import com.kissa.app.ai.AiService
+import com.kissa.app.ai.BackendClient
+import com.kissa.app.ai.TtsRequest
 import com.kissa.app.model.Emotion
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,13 +47,28 @@ data class Utterance(
     val rate: Float,
     val emotion: Emotion = Emotion.NEUTRAL,
     val audioFile: String? = null,
+    /** Gemini prebuilt voice for natural speech through the backend; null = phone TTS only. */
+    val neuralVoice: String? = null,
+    val delivery: String? = null,
+    val vocal: String? = null,
+    val lang: String = "hinglish",
 )
+
+/** Which voice engine is actually being heard. The UI shows "Basic voice" whenever premium isn't really active. */
+data class VoiceMode(val premium: Boolean, val reason: String? = null)
 
 /**
  * Single audio queue for the whole app. TTS lines and recorded voice clips are played strictly one at a
  * time (Mutex), so speech never overlaps; stop() cancels whatever is playing and releases the waiter.
  */
-class SpeechDirector(private val ctx: Context) {
+class SpeechDirector(private val ctx: Context, private val backend: BackendClient? = null, private val ai: AiService? = null) {
+    private val _mode = MutableStateFlow(VoiceMode(premium = false, reason = "Checking natural voices…"))
+    val mode: StateFlow<VoiceMode> = _mode.asStateFlow()
+    /** Set from settings: false = always use the phone voice. */
+    @Volatile var naturalVoicesEnabled = true
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val inflight = ConcurrentHashMap<String, Deferred<File?>>()
+    private val cacheDir: File by lazy { File(ctx.cacheDir, "tts").apply { mkdirs() } }
     private val _ready = MutableStateFlow(false)
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
     private val _speaking = MutableStateFlow<SpeakingState?>(null)
@@ -119,7 +138,29 @@ class SpeechDirector(private val ctx: Context) {
     /** Plays one utterance and suspends until it finished or was stopped. Returns true if fully played. */
     suspend fun play(u: Utterance): Boolean = mutex.withLock {
         val myGen = generation
-        if (u.audioFile != null && File(u.audioFile).exists()) return@withLock playFile(u, myGen)
+        if (u.audioFile != null && File(u.audioFile).exists()) return@withLock playFile(u, myGen, isRecording = true)
+        if (canUseNeural(u)) {
+            // wait for the audio, but stay interruptible by stop() (tap-to-skip / new input)
+            val d = ioScope.async { neuralFile(u) }
+            val deadline = System.currentTimeMillis() + 16_000
+            var f: File? = null
+            while (generation == myGen && System.currentTimeMillis() < deadline) {
+                if (d.isCompleted) { f = d.await(); break }
+                delay(40)
+            }
+            if (generation != myGen) return@withLock false
+            if (f != null) {
+                val ok = playFile(u.copy(audioFile = f.absolutePath), myGen, isRecording = false)
+                if (ok || generation != myGen) return@withLock ok
+            }
+        }
+        if (u.neuralVoice != null && (_mode.value.premium || !canUseNeural(u))) {
+            _mode.value = VoiceMode(false, when {
+                !naturalVoicesEnabled -> "Phone voice (natural voices are off)"
+                backend?.configured != true -> "Natural voices not set up — basic phone voice"
+                else -> "Natural voice unavailable — basic phone voice"
+            })
+        }
         if (!_ready.value) {
             // wait up to 3s for the engine
             withTimeoutOrNull(3000) { while (!_ready.value) delay(50) }
@@ -160,9 +201,71 @@ class SpeechDirector(private val ctx: Context) {
         ok
     }
 
-    private suspend fun playFile(u: Utterance, myGen: Long): Boolean {
+    // ------------------------------------------------------------------ natural (neural) voices via the backend
+
+    private fun canUseNeural(u: Utterance): Boolean =
+        naturalVoicesEnabled && u.neuralVoice != null && backend?.configured == true
+
+    private fun cacheKey(u: Utterance): String {
+        val raw = listOf(u.neuralVoice, u.emotion.name, u.delivery.orEmpty(), u.vocal.orEmpty(), u.lang, u.text).joinToString("|")
+        val md = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
+        return md.joinToString("") { "%02x".format(it) }
+    }
+
+    /** Fetches (or reuses the cached) natural-voice WAV for a line. Null when the backend can't voice it right now. */
+    suspend fun neuralFile(u: Utterance): File? {
+        val b = backend ?: return null
+        if (u.neuralVoice == null || !b.configured) return null
+        val key = cacheKey(u)
+        val f = File(cacheDir, "$key.wav")
+        if (f.exists() && f.length() > 64) { f.setLastModified(System.currentTimeMillis()); return f }
+        val job = inflight.getOrPut(key) {
+            ioScope.async {
+                try {
+                    val bytes = b.tts(TtsRequest(u.text, u.neuralVoice, u.emotion.name, u.lang, u.delivery, u.vocal))
+                    val tmp = File(cacheDir, "$key.tmp"); tmp.writeBytes(bytes); tmp.renameTo(f)
+                    _mode.value = VoiceMode(premium = true)
+                    ai?.reportVoiceSuccess()
+                    trimCache()
+                    f
+                } catch (e: AiException) {
+                    _mode.value = VoiceMode(premium = false, reason = when (e.kind) {
+                        AiException.Kind.NETWORK, AiException.Kind.TIMEOUT -> "Offline — basic phone voice"
+                        AiException.Kind.QUOTA, AiException.Kind.SERVICE_LIMIT -> "Voice limit reached — basic phone voice"
+                        AiException.Kind.SERVICE_SETUP -> "Natural voices not set up — basic phone voice"
+                        else -> "Natural voice unavailable — basic phone voice"
+                    })
+                    ai?.reportVoiceFailure()
+                    null
+                } catch (e: Exception) {
+                    _mode.value = VoiceMode(false, "Natural voice unavailable — basic phone voice"); null
+                } finally { inflight.remove(key) }
+            }
+        }
+        return job.await()
+    }
+
+    /** Starts generating a line's audio early (e.g. while the player's own line is still playing). */
+    fun prefetch(u: Utterance) {
+        if (!canUseNeural(u)) return
+        ioScope.launch { runCatching { neuralFile(u) } }
+    }
+
+    private fun trimCache() {
+        val files = cacheDir.listFiles()?.filter { it.name.endsWith(".wav") } ?: return
+        var total = files.sumOf { it.length() }
+        if (total < 60L * 1024 * 1024) return
+        for (f in files.sortedBy { it.lastModified() }) { total -= f.length(); f.delete(); if (total < 40L * 1024 * 1024) break }
+    }
+
+    fun clearVoiceCache() { cacheDir.listFiles()?.forEach { it.delete() } }
+
+    fun noteBasic(reason: String) { _mode.value = VoiceMode(false, reason) }
+
+    private suspend fun playFile(u: Utterance, myGen: Long, isRecording: Boolean): Boolean {
         val done = CompletableDeferred<Boolean>()
         val env = runCatching { WavUtil.envelope(File(u.audioFile!!)) }.getOrNull()
+        var ticker: Job? = null
         withContext(Dispatchers.Main) {
             try {
                 val mp = MediaPlayer()
@@ -173,11 +276,24 @@ class SpeechDirector(private val ctx: Context) {
                 mp.setOnErrorListener { _, _, _ -> done.complete(false); true }
                 mp.prepare()
                 player = mp; playerWaiter = done
-                _speaking.value = SpeakingState(u.speakerId, u.text, highlightEnd = u.text.length, envelope = env, isRecording = true)
+                val dur = mp.duration.coerceAtLeast(1)
+                _speaking.value = SpeakingState(u.speakerId, u.text, highlightEnd = if (isRecording) u.text.length else 0, envelope = env,
+                    isRecording = isRecording, hasWordEvents = !isRecording)
                 mp.start()
-            } catch (e: Exception) { done.complete(false) }
+                if (!isRecording) { ticker = ioScope.launch {
+                    // karaoke-style subtitle progress from the real playback position
+                    while (isActive) {
+                        val pos = runCatching { mp.currentPosition }.getOrDefault(0)
+                        val s = _speaking.value ?: break
+                        _speaking.value = s.copy(highlightEnd = (u.text.length * pos / dur.toFloat() * 1.08f).toInt().coerceAtMost(u.text.length))
+                        delay(90)
+                    }
+                } }
+                Unit
+            } catch (e: Exception) { done.complete(false); Unit }
         }
         val ok = withTimeoutOrNull(120_000) { done.await() } ?: false
+        ticker?.cancel()
         withContext(Dispatchers.Main) {
             runCatching { player?.release() }; player = null; playerWaiter = null
             _speaking.value = null

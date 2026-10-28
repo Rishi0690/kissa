@@ -8,7 +8,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
-import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.kissa.app.R
@@ -30,7 +32,7 @@ fun SettingId.backgroundRes(): Int = when (this) {
 }
 
 /** Colour grade applied over the whole stage so the characters sit inside the painted lighting. */
-private fun SettingId.grade(): Pair<Color, Float> = when (this) {
+internal fun SettingId.grade(): Pair<Color, Float> = when (this) {
     SettingId.CORRIDOR -> Color(0xFFFFB46B) to 0.10f
     SettingId.CAFE -> Color(0xFFFF9D4D) to 0.12f
     SettingId.LIBRARY -> Color(0xFF2B4A8A) to 0.22f
@@ -41,10 +43,31 @@ private fun SettingId.grade(): Pair<Color, Float> = when (this) {
     SettingId.CLASSROOM -> Color(0xFFFFD39A) to 0.07f
 }
 
-/** Drives the frame loop (only while composed/visible) and renders the stage. */
+fun SettingId.blurRes(): Int = when (this) {
+    SettingId.CORRIDOR -> R.drawable.bg_corridor_blur
+    SettingId.CAFE -> R.drawable.bg_cafe_blur
+    SettingId.LIBRARY -> R.drawable.bg_library_blur
+    SettingId.FOREST -> R.drawable.bg_forest_blur
+    SettingId.SPACESHIP -> R.drawable.bg_spaceship_blur
+    SettingId.STREET -> R.drawable.bg_street_blur
+    SettingId.PARK -> R.drawable.bg_park_blur
+    SettingId.CLASSROOM -> R.drawable.bg_classroom_blur
+}
+
+/** Reverse-angle plate (looking toward the player). Settings without one mirror the main plate. */
+fun SettingId.reverseRes(): Pair<Int, Int>? = when (this) {
+    SettingId.CORRIDOR -> R.drawable.bg_corridor_rev to R.drawable.bg_corridor_rev_blur
+    else -> null
+}
+
+/** Loads painted art off the main thread, drives the frame loop (only while visible) and renders the cinematic shots. */
 @Composable
 fun SceneStage(engine: SceneEngine, speaking: StateFlow<SpeakingState?>, modifier: Modifier = Modifier, paused: Boolean = false) {
-    val bg = ImageBitmap.imageResource(engine.setting.backgroundRes())
+    val ctx = LocalContext.current
+    var art by remember(engine) { mutableStateOf<SceneArt?>(null) }
+    LaunchedEffect(engine) {
+        art = withContext(Dispatchers.IO) { loadSceneArt(ctx, engine) }
+    }
     LaunchedEffect(engine, paused) {
         if (paused) return@LaunchedEffect
         var last = 0L
@@ -58,8 +81,29 @@ fun SceneStage(engine: SceneEngine, speaking: StateFlow<SpeakingState?>, modifie
     }
     Canvas(modifier) {
         @Suppress("UNUSED_VARIABLE") val f = engine.frame // subscribe to frame ticks
-        drawStage(engine, bg)
+        val a = art
+        if (a == null) drawRect(Color.Black) else drawCinematic(engine, a)
     }
+}
+
+private fun decodeRes(ctx: android.content.Context, id: Int): ImageBitmap =
+    android.graphics.BitmapFactory.decodeResource(ctx.resources, id).asImageBitmap()
+
+internal fun loadSceneArt(ctx: android.content.Context, engine: SceneEngine): SceneArt {
+    val manifest = runCatching { ctx.assets.open("cast/manifest.json").bufferedReader().use { CastManifest.parse(it.readText()) } }.getOrDefault(emptyMap())
+    val loader: (String) -> ImageBitmap? = { path -> runCatching { ctx.assets.open(path).use { android.graphics.BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull() }
+    val npcId = CastRegistry.castIdFor(engine.npc.id)?.takeIf { manifest.containsKey(it) }
+    val playerId = CastRegistry.playerCastId(npcId, engine.player.appearance.body == com.kissa.app.model.BodyType.FEM)?.takeIf { manifest.containsKey(it) }
+    val npcCast = npcId?.let { CastSet(it, manifest.getValue(it), loader) }?.also { it.warm() }
+    val playerCast = playerId?.let { CastSet(it, manifest.getValue(it), loader) }?.also { it.warm() }
+    val rev = engine.setting.reverseRes()
+    return SceneArt(
+        bg = decodeRes(ctx, engine.setting.backgroundRes()),
+        bgBlur = runCatching { decodeRes(ctx, engine.setting.blurRes()) }.getOrNull(),
+        bgRev = rev?.let { decodeRes(ctx, it.first) },
+        bgRevBlur = rev?.let { runCatching { decodeRes(ctx, it.second) }.getOrNull() },
+        npcCast = npcCast, playerCast = playerCast,
+    )
 }
 
 fun DrawScope.drawStage(engine: SceneEngine, bg: ImageBitmap) {
@@ -108,17 +152,21 @@ fun DrawScope.drawStage(engine: SceneEngine, bg: ImageBitmap) {
     drawParticles(engine, w, h, camPx * 1.25f)
     if (engine.rain > 0.02f) drawRain(engine, w, h)
 
-    // ---- grade, lighting events, vignette
+    drawFinish(engine, w, h)
+}
+
+/** Grade, lighting events, vignette, flash and fade — shared by the wide stage and the cinematic shots. */
+internal fun DrawScope.drawFinish(engine: SceneEngine, w: Float, h: Float, vignette: Float = 0.55f) {
     val (gc, ga) = engine.setting.grade()
     drawRect(gc.copy(alpha = ga), blendMode = BlendMode.SrcOver)
     if (engine.dim > 0.01f) drawRect(Color(0xFF05040C).copy(alpha = engine.dim))
     if (engine.flicker > 0.01f) drawRect(Color.Black.copy(alpha = engine.flicker))
-    drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)), Offset(w / 2f, h * 0.45f), max(w, h) * 0.75f))
+    drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = vignette)), Offset(w / 2f, h * 0.45f), max(w, h) * 0.75f))
     if (engine.flash > 0.01f) drawRect(Color.White.copy(alpha = engine.flash * 0.55f))
     if (engine.fade > 0.005f) drawRect(Color.Black.copy(alpha = engine.fade.coerceIn(0f, 1f)))
 }
 
-private fun DrawScope.drawSettingLight(engine: SceneEngine, w: Float, h: Float) {
+internal fun DrawScope.drawSettingLight(engine: SceneEngine, w: Float, h: Float) {
     val t = engine.time
     when (engine.setting) {
         SettingId.CORRIDOR, SettingId.CLASSROOM -> {
@@ -166,7 +214,7 @@ private fun DrawScope.drawSettingLight(engine: SceneEngine, w: Float, h: Float) 
     }
 }
 
-private fun DrawScope.drawSilhouette(s: Silhouette, w: Float, floor: Float, height: Float, t: Float, alpha: Float) {
+internal fun DrawScope.drawSilhouette(s: Silhouette, w: Float, floor: Float, height: Float, t: Float, alpha: Float) {
     val x = s.x * w
     val hh = height * s.tall
     val bob = abs(sin(t * 6f + s.shade * 5f)) * hh * 0.012f
@@ -183,7 +231,7 @@ private fun DrawScope.drawSilhouette(s: Silhouette, w: Float, floor: Float, heig
     }
 }
 
-private fun DrawScope.drawParticles(engine: SceneEngine, w: Float, h: Float, shift: Float) {
+internal fun DrawScope.drawParticles(engine: SceneEngine, w: Float, h: Float, shift: Float) {
     val t = engine.time
     val dens = density
     for (p in engine.particles) {
@@ -218,7 +266,7 @@ private fun DrawScope.drawParticles(engine: SceneEngine, w: Float, h: Float, shi
     }
 }
 
-private fun DrawScope.drawRain(engine: SceneEngine, w: Float, h: Float) {
+internal fun DrawScope.drawRain(engine: SceneEngine, w: Float, h: Float) {
     val a = engine.rain
     val col = Color(0xFFCFE6FF).copy(alpha = 0.35f * a)
     val len = h * 0.035f

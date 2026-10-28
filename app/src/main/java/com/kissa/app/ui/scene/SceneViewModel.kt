@@ -15,6 +15,7 @@ import com.kissa.app.voice.Utterance
 import com.kissa.app.voice.SpeechDirector
 import com.kissa.app.voice.VoiceInput
 import com.kissa.app.voice.VoiceInputState
+import com.kissa.app.voice.NeuralVoices
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -42,6 +43,34 @@ data class SceneUi(
     val toast: String? = null,
     val lastNote: String? = null,
     val turnCount: Int = 0,
+    /** Numbered choice cards over the dimmed scene (optional — free text / mic stay available). */
+    val showChoices: Boolean = false,
+    /** The last turn went badly (big relationship drop / she walked off): show the red X + rewind offer. */
+    val badTurn: Boolean = false,
+    val canRewind: Boolean = false,
+    /** Set while the VHS rewind plays. */
+    val rewinding: Boolean = false,
+    /** Rank label that was just earned (badge glow + toast). */
+    val rankUp: String? = null,
+    val errorIsSetup: Boolean = false,
+)
+
+/** Relationship rank shown in the small glass badge (like the reference's "PLAYER NOOB -> PLAYER PRO"). */
+fun rankFor(relationship: Int): String = when {
+    relationship < 30 -> "NOOB"
+    relationship < 50 -> "ROOKIE"
+    relationship < 70 -> "PRO"
+    relationship < 88 -> "LEGEND"
+    else -> "SOULMATE"
+}
+
+private data class TurnSnapshot(
+    val pt: PlaythroughEntity,
+    val cutoffMessageId: Long,
+    val line: Line?,
+    val suggestions: List<String>,
+    val noteIds: MutableList<Long> = mutableListOf(),
+    val npcEmotion: Emotion,
 )
 
 class SceneViewModel(private val storyId: String, private val replayCheckpoint: Long?) : ViewModel() {
@@ -50,7 +79,11 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
     private val dao = repo.dao
     private val settings = app.settings
     val speech: SpeechDirector = app.speech
-    val voice = VoiceInput(app, repo.audioDir())
+    val voice = VoiceInput(app, repo.audioDir(),
+        serverStt = if (app.backend.configured) { file, _ -> app.backend.stt(file.readBytes(), NeuralVoices.langCode(_ui.value.language)) } else null,
+        scope = viewModelScope)
+    val voiceMode = speech.mode
+    val setup = app.ai.setup
 
     private val _ui = MutableStateFlow(SceneUi())
     val ui: StateFlow<SceneUi> = _ui.asStateFlow()
@@ -66,6 +99,9 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
     private var turnJob: Job? = null
     private var lastFailedInput: Pair<String?, String?>? = null
     private var summarizing = false
+    private val snapshots = ArrayDeque<TurnSnapshot>()
+    /** Session memory of how each line was performed, so replays reuse the same cached natural-voice audio. */
+    private val deliveries = HashMap<Long, Pair<String?, String?>>()
 
     init {
         viewModelScope.launch { load() }
@@ -77,7 +113,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 }
             }
         }
-        viewModelScope.launch { settings.state.collect { speech.volume = it.volume; engine?.reduceMotion = it.reduceMotion } }
+        viewModelScope.launch { settings.state.collect { speech.volume = it.volume; speech.naturalVoicesEnabled = it.naturalVoices; engine?.reduceMotion = it.reduceMotion } }
     }
 
     private suspend fun load() {
@@ -113,7 +149,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
             }
             _ui.update {
                 it.copy(phase = Phase.IDLE, line = lastNpc?.let { m -> Line(s.character.name, m.text, m.action, false, m.id) },
-                    suggestions = AiParser.defaultReplies(lang), banner = "Chapter ${pt.chapter + 1} · ${s.chapters.getOrNull(pt.chapter)?.title ?: ""}")
+                    suggestions = AiParser.defaultReplies(lang), showChoices = false, banner = "Chapter ${pt.chapter + 1} · ${s.chapters.getOrNull(pt.chapter)?.title ?: ""}")
             }
             delay(2500); _ui.update { it.copy(banner = null) }
         }
@@ -135,39 +171,44 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         }
         speech.stop() // interrupt anything still playing
         turnJob?.cancel()
+        _ui.update { it.copy(showChoices = false, badTurn = false) }
         requestTurn(text, audioPath, playerAlreadyShown = false)
     }
 
     fun retry() {
         val (t, a) = lastFailedInput ?: (null to null)
-        _ui.update { it.copy(error = null, canRetry = false, errorNeedsKey = false) }
+        _ui.update { it.copy(error = null, canRetry = false, errorNeedsKey = false, errorIsSetup = false) }
+        if (app.ai.setup.value.phase != com.kissa.app.ai.SetupState.Phase.READY) app.ai.runSetup(force = true)
         requestTurn(t, a, playerAlreadyShown = true)
     }
 
     private fun requestTurn(text: String?, audioPath: String?, playerAlreadyShown: Boolean) {
         val eng = engine ?: return
         turnJob = viewModelScope.launch {
-            _ui.update { it.copy(error = null, canRetry = false, errorNeedsKey = false, suggestions = emptyList()) }
+            _ui.update { it.copy(error = null, canRetry = false, errorNeedsKey = false, errorIsSetup = false, suggestions = emptyList(), showChoices = false) }
             val st = settings.current
             val ui0 = _ui.value
             // 1. persist + voice the player's line, while the AI request runs in parallel
             if (text != null && !playerAlreadyShown) {
+                state?.let { pt ->
+                    snapshots.addLast(TurnSnapshot(pt, dao.messages(storyId).lastOrNull()?.id ?: 0L, ui0.line, ui0.suggestions, npcEmotion = eng.npc.emotion))
+                    while (snapshots.size > 20) snapshots.removeFirst()
+                }
                 val id = dao.insertMessage(MessageEntity(storyId = storyId, role = Role.PLAYER.name, speaker = ui0.playerName, text = text, audioPath = audioPath))
                 _ui.update { it.copy(phase = Phase.PLAYER_SPEAKING, line = Line(ui0.playerName, text, null, true, id)) }
             }
-            val aiDeferred = async { fetchAi(text) }
+            // the character's natural-voice audio starts generating the moment the AI reply lands
+            val aiDeferred = async { fetchAi(text).also { r -> r.getOrNull()?.let { speech.prefetch(characterUtterance(it.dialogue, it.emotion, it.delivery, it.vocal)) } } }
             if (text != null && !playerAlreadyShown) {
                 eng.focusId = "player"
                 val (pe, pg) = playerBodyLanguage(text)
                 eng.react("player", pe, pg)
                 val useRecording = audioPath != null && st.keepRealVoice
                 if (useRecording || st.speakPlayerLines) {
-                    speech.play(
-                        Utterance("player", text, localeFor(text), st.playerVoiceName, st.playerBody == BodyType.FEM,
-                            st.playerPitch, st.playerRate, Emotion.NEUTRAL, if (useRecording) audioPath else null)
-                    )
+                    speech.play(playerUtterance(text, pe, if (useRecording) audioPath else null))
                 } else delay(600)
                 eng.focusId = null
+                delay(280) // a natural beat before she answers
             }
             // 2. thinking state until the reply lands
             if (!aiDeferred.isCompleted) {
@@ -180,10 +221,12 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 onSuccess = { turn -> applyTurn(turn) },
                 onFailure = { err ->
                     lastFailedInput = text to audioPath
-                    val needsKey = err is AiException && (err.kind == AiException.Kind.NO_KEY || err.kind == AiException.Kind.AUTH)
+                    val kind = (err as? AiException)?.kind
+                    val needsKey = kind == AiException.Kind.NO_KEY
+                    val isSetup = kind == AiException.Kind.SERVICE_SETUP
                     eng.react(story.character.id, Emotion.CONFUSED, Gesture.HEAD_TILT)
                     _ui.update {
-                        it.copy(phase = Phase.IDLE, error = friendlyError(err), canRetry = true, errorNeedsKey = needsKey,
+                        it.copy(phase = Phase.IDLE, error = friendlyError(err), canRetry = true, errorNeedsKey = needsKey, errorIsSetup = isSetup,
                             suggestions = AiParser.defaultReplies(it.language))
                     }
                 },
@@ -193,22 +236,40 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
 
     private fun localeFor(text: String): String = if (SpeechDirector.hasDevanagari(text)) "hi-IN" else _ui.value.language.ttsTag
 
+    private fun langCode() = NeuralVoices.langCode(_ui.value.language)
+
+    /** The character's line: fixed natural voice per character + emotion/delivery-driven performance. */
+    private fun characterUtterance(text: String, emotion: Emotion, delivery: String?, vocal: String?): Utterance {
+        val st = settings.current
+        val v = story.character.voice
+        return Utterance(story.character.id, text, localeFor(text), st.voiceOverrides[story.character.id] ?: v.voiceName, v.feminine, v.pitch, v.rate, emotion,
+            neuralVoice = NeuralVoices.forCharacter(story.character, st.neuralOverrides[story.character.id]), delivery = delivery, vocal = vocal, lang = langCode())
+    }
+
+    /** The player's line: their real recording when they spoke, otherwise their chosen natural voice. */
+    private fun playerUtterance(text: String, emotion: Emotion, audioPath: String?): Utterance {
+        val st = settings.current
+        return Utterance("player", text, localeFor(text), st.playerVoiceName, st.playerBody == BodyType.FEM, st.playerPitch, st.playerRate, emotion, audioPath,
+            neuralVoice = NeuralVoices.forPlayer(st.playerNeuralVoice, st.playerBody), lang = langCode())
+    }
+
     private fun friendlyError(e: Throwable): String {
         val name = story.character.name.substringBefore(' ')
         return when ((e as? AiException)?.kind) {
-            AiException.Kind.NO_KEY -> "$name is waiting — add your free Gemini API key in Settings to bring the story to life."
-            AiException.Kind.AUTH -> "Your Gemini API key was rejected. Check it in Settings."
-            AiException.Kind.QUOTA -> "$name needs a breather (AI rate limit reached). Tap retry in a few seconds."
-            AiException.Kind.NETWORK -> "$name can't hear you — you seem to be offline. Tap retry when you're connected."
+            AiException.Kind.SERVICE_SETUP -> "AI service abhi setup nahi hai — $name will talk as soon as it's switched on. Tap retry later."
+            AiException.Kind.SERVICE_LIMIT -> "Aaj ki AI limit khatam ho gayi hai. $name will be back soon — try again later."
+            AiException.Kind.NO_KEY -> "Developer key missing (debug build)."
+            AiException.Kind.AUTH -> "Couldn't verify this device with the AI service. Tap retry."
+            AiException.Kind.QUOTA -> "$name needs a breather (too many messages too fast). Tap retry in a few seconds."
+            AiException.Kind.NETWORK -> "$name can't hear you — aap offline lag rahe ho. Tap retry when you're connected."
             AiException.Kind.TIMEOUT -> "$name is lost in thought (the AI is slow right now). Tap retry."
             AiException.Kind.BLOCKED -> "$name won't go there. Try saying something else."
-            AiException.Kind.MODEL_NOT_FOUND -> "The selected AI model isn't available for your key. Pick another model in Settings."
+            AiException.Kind.MODEL_NOT_FOUND, AiException.Kind.SERVER -> "AI service abhi busy hai. Tap retry in a moment."
             else -> "$name looks confused (${e.message?.take(80)}). Tap retry."
         }
     }
 
     private suspend fun fetchAi(playerText: String?): Result<AiTurn> = runCatching {
-        val st = settings.current
         val pt = state ?: repo.ensurePlaythrough(story)
         val all = dao.messages(storyId)
         // the just-inserted player line is passed separately as the new input
@@ -219,28 +280,16 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
             story, _ui.value.playerName, _ui.value.language,
             StateSnapshot(pt.mood, pt.relationship, pt.chapter, pt.summary, pt.turnCount, pt.ended), notes, history, playerText,
         )
-        val models = listOf(st.model) + GeminiClient.MODELS.filter { it != st.model }
+        // the backend picks the model (with fallback); we validate and retry once on an unreadable reply
         var lastErr: Throwable? = null
-        for ((i, model) in models.withIndex()) {
-            if (i > 2) break
-            try {
-                repeat(2) { attempt ->
-                    val raw = app.gemini.generate(settings.apiKey(), st.proxyUrl, model, payload, ContextBuilder.responseSchema(), temperature = if (attempt == 0) 0.95 else 0.6)
-                    when (val r = AiParser.parse(raw, _ui.value.language)) {
-                        is ParseResult.Ok -> {
-                            if (model != st.model) settings.update { putString("model", model) }
-                            return@runCatching r.turn
-                        }
-                        is ParseResult.Fail -> lastErr = AiException("Unreadable reply: ${r.reason}", AiException.Kind.BAD_RESPONSE, true)
-                    }
-                }
-                throw lastErr!!
-            } catch (e: AiException) {
-                lastErr = e
-                if (e.kind != AiException.Kind.MODEL_NOT_FOUND) throw e
+        repeat(2) { attempt ->
+            val raw = app.ai.generate(payload, ContextBuilder.responseSchema(), temperature = if (attempt == 0) 0.95 else 0.6)
+            when (val r = AiParser.parse(raw, _ui.value.language)) {
+                is ParseResult.Ok -> return@runCatching r.turn
+                is ParseResult.Fail -> lastErr = AiException("Unreadable reply: ${r.reason}", AiException.Kind.BAD_RESPONSE, true)
             }
         }
-        throw lastErr ?: AiException("No model available", AiException.Kind.MODEL_NOT_FOUND, false)
+        throw lastErr ?: AiException("No reply", AiException.Kind.BAD_RESPONSE, true)
     }
 
     private suspend fun applyTurn(turn: AiTurn) {
@@ -256,7 +305,10 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
             MessageEntity(storyId = storyId, role = Role.CHARACTER.name, speaker = story.character.name, text = turn.dialogue,
                 action = turn.action, emotion = turn.emotion.name, gesture = turn.gesture.name)
         )
-        turn.memoryNote?.let { dao.insertNote(MemoryNoteEntity(storyId = storyId, text = it)) }
+        turn.memoryNote?.let { val nid = dao.insertNote(MemoryNoteEntity(storyId = storyId, text = it)); snapshots.lastOrNull()?.noteIds?.add(nid) }
+        val oldRank = rankFor(pt0.relationship)
+        val newRank = rankFor(pt.relationship)
+        val bad = turn.relationshipDelta <= -4 || turn.moodDelta <= -7 || turn.sceneEvent == SceneEvent.CHARACTER_EXITS
 
         var banner: String? = null
         var ending: String? = null
@@ -274,27 +326,31 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         if (ending != null) repo.createCheckpoint(storyId, "Ending · $ending")
 
         // drive the scene, then speak; the player's avatar reacts to her too
+        val st = settings.current
+        val utter = characterUtterance(turn.dialogue, turn.emotion, turn.delivery, turn.vocal)
+        deliveries[msgId] = turn.delivery to turn.vocal
+        // keep "thinking" until her natural-voice audio is ready, so the mouth never moves over silence
+        if (st.characterVoicesOn) withTimeoutOrNull(12_000) { speech.neuralFile(utter) }
+
         eng.react(story.character.id, turn.emotion, turn.gesture)
         eng.react("player", mirror(turn.emotion), Gesture.NONE)
         if (turn.sceneEvent == SceneEvent.PLOT_TWIST) eng.react("player", Emotion.SURPRISED, Gesture.STEP_BACK)
-        eng.event(turn.sceneEvent)
+        if (turn.sceneEvent != SceneEvent.CHARACTER_EXITS) eng.event(turn.sceneEvent)
         if (turn.sceneEvent in listOf(SceneEvent.CHAPTER_COMPLETE, SceneEvent.ENDING) && banner != null) eng.fadeOutIn()
         _ui.update {
             it.copy(phase = Phase.CHARACTER_SPEAKING, line = Line(story.character.name, turn.dialogue, turn.action, false, msgId),
                 mood = pt.mood, relationship = pt.relationship, chapter = pt.chapter, banner = banner, turnCount = pt.turnCount,
-                lastNote = turn.memoryNote, ended = pt.ended)
+                lastNote = turn.memoryNote, ended = pt.ended, rankUp = if (newRank != oldRank && pt.relationship > pt0.relationship) newRank else null)
         }
-        val st = settings.current
-        if (st.characterVoicesOn) {
-            val v = story.character.voice
-            speech.play(
-                Utterance(story.character.id, turn.dialogue, localeFor(turn.dialogue), st.voiceOverrides[story.character.id] ?: v.voiceName,
-                    v.feminine, v.pitch, v.rate, turn.emotion)
-            )
-        } else delay(1200L + turn.dialogue.length * 45L)
-        _ui.update { it.copy(phase = Phase.IDLE, suggestions = turn.suggestedReplies, banner = null, ending = ending, lastNote = null) }
+        if (st.characterVoicesOn) speech.play(utter) else delay(1200L + turn.dialogue.length * 45L)
+        // she walks off only after she has said her piece (like the reference)
+        if (turn.sceneEvent == SceneEvent.CHARACTER_EXITS) { eng.event(turn.sceneEvent); delay(3200) }
+        _ui.update {
+            it.copy(phase = Phase.IDLE, suggestions = turn.suggestedReplies, banner = null, ending = ending, lastNote = null,
+                showChoices = st.showSuggestions && ending == null && !bad, badTurn = bad && snapshots.isNotEmpty(), canRewind = snapshots.isNotEmpty())
+        }
         maybeSummarize()
-        if (_ui.value.continuousVoice && ending == null) startListening()
+        if (_ui.value.continuousVoice && ending == null && !bad) startListening()
     }
 
     /** Lightweight body language for the player's own line (their words are theirs; this is just animation). */
@@ -340,8 +396,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 val toFold = uncovered.dropLast(ContextBuilder.RECENT_TURNS)
                 val payload = ContextBuilder.summaryPrompt(story, _ui.value.playerName, pt.summary,
                     toFold.map { HistoryLine(Role.valueOf(it.role), it.text) })
-                val st = settings.current
-                val text = app.gemini.generate(settings.apiKey(), st.proxyUrl, st.model, payload, null, temperature = 0.3, maxTokens = 1024)
+                val text = app.ai.generate(payload, null, temperature = 0.3, maxTokens = 1024)
                 val cur = state ?: return@launch
                 val upd = cur.copy(summary = text.trim().take(ContextBuilder.MAX_SUMMARY), summarizedUpToId = toFold.last().id)
                 dao.upsertPlaythrough(upd); state = upd
@@ -372,15 +427,15 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         if (_ui.value.phase != Phase.IDLE) return
         viewModelScope.launch {
             val st = settings.current
+            val m = messages.value.firstOrNull { it.id == l.messageId }
             if (l.isPlayer) {
-                val m = messages.value.firstOrNull { it.id == l.messageId }
-                speech.play(Utterance("player", l.text, localeFor(l.text), st.playerVoiceName, st.playerBody == BodyType.FEM, st.playerPitch, st.playerRate, Emotion.NEUTRAL, m?.audioPath?.takeIf { st.keepRealVoice }))
+                speech.play(playerUtterance(l.text, Emotion.NEUTRAL, m?.audioPath?.takeIf { st.keepRealVoice }))
             } else {
-                val m = messages.value.firstOrNull { it.id == l.messageId }
                 val emo = Emotion.fromAny(m?.emotion) ?: Emotion.NEUTRAL
                 engine?.react(story.character.id, emo, Gesture.fromAny(m?.gesture) ?: Gesture.NONE)
-                val v = story.character.voice
-                speech.play(Utterance(story.character.id, l.text, localeFor(l.text), st.voiceOverrides[story.character.id] ?: v.voiceName, v.feminine, v.pitch, v.rate, emo))
+                // replays reuse the cached natural-voice audio when the delivery matches (cache key includes it)
+                val d = deliveries[l.messageId]
+                speech.play(characterUtterance(l.text, emo, d?.first, d?.second))
             }
         }
     }
@@ -401,13 +456,13 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 _ui.update { it.copy(line = Line(m.speaker, m.text, m.action, isPlayer, m.id)) }
                 if (isPlayer) {
                     engine?.focusId = "player"
-                    speech.play(Utterance("player", m.text, localeFor(m.text), st.playerVoiceName, st.playerBody == BodyType.FEM, st.playerPitch, st.playerRate, Emotion.NEUTRAL, m.audioPath?.takeIf { st.keepRealVoice }))
+                    speech.play(playerUtterance(m.text, Emotion.NEUTRAL, m.audioPath?.takeIf { st.keepRealVoice }))
                     engine?.focusId = null
                 } else {
                     val emo = Emotion.fromAny(m.emotion) ?: Emotion.NEUTRAL
                     engine?.react(story.character.id, emo, Gesture.fromAny(m.gesture) ?: Gesture.NONE)
-                    val v = story.character.voice
-                    speech.play(Utterance(story.character.id, m.text, localeFor(m.text), st.voiceOverrides[story.character.id] ?: v.voiceName, v.feminine, v.pitch, v.rate, emo))
+                    val d = deliveries[m.id]
+                    speech.play(characterUtterance(m.text, emo, d?.first, d?.second))
                 }
                 delay(350)
             }
@@ -453,12 +508,50 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         viewModelScope.launch {
             turnJob?.cancel(); speech.stop()
             repo.resetProgress(storyId)
+            snapshots.clear()
             state = repo.ensurePlaythrough(story)
             engine?.react(story.character.id, Emotion.NEUTRAL, Gesture.NONE)
             _ui.update { it.copy(line = null, ending = null, ended = false, mood = state!!.mood, relationship = state!!.relationship, chapter = 0, turnCount = 0, phase = Phase.INTRO) }
             engine?.startEntrance(withWalk = true)
             delay(2600)
             requestTurn(null, null, playerAlreadyShown = true)
+        }
+    }
+
+    // ------------------------------------------------------------------ choices, rewind, skip
+
+    fun pickChoice(text: String) { _ui.update { it.copy(showChoices = false) }; send(text) }
+    fun hideChoices() = _ui.update { it.copy(showChoices = false) }
+    fun showChoicesAgain() { if (_ui.value.suggestions.isNotEmpty()) _ui.update { it.copy(showChoices = true) } }
+    fun dismissBadTurn() = _ui.update { it.copy(badTurn = false, showChoices = settings.current.showSuggestions) }
+    fun consumeRankUp() = _ui.update { it.copy(rankUp = null) }
+
+    /** Tap-to-skip: cut the current line short (the next beat continues immediately). */
+    fun skipLine() { if (speech.speaking.value != null) speech.stop() }
+
+    /** Undo the last exchange: VHS rewind back to before the player's line (meters, memory and lines restored). */
+    fun rewind() {
+        val snap = snapshots.removeLastOrNull() ?: return
+        turnJob?.cancel(); speech.stop(); voice.cancel()
+        turnJob = viewModelScope.launch {
+            _ui.update { it.copy(rewinding = true, badTurn = false, showChoices = false, error = null) }
+            engine?.rewindFx(1.5f)
+            withContext(Dispatchers.IO) {
+                dao.audioPathsAfter(storyId, snap.cutoffMessageId).forEach { runCatching { java.io.File(it).delete() } }
+                dao.deleteMessagesAfter(storyId, snap.cutoffMessageId)
+                dao.deleteCheckpointsAfter(storyId, snap.cutoffMessageId)
+                snap.noteIds.forEach { dao.deleteNote(it) }
+                dao.upsertPlaythrough(snap.pt)
+            }
+            state = snap.pt
+            engine?.react(story.character.id, snap.npcEmotion, Gesture.NONE)
+            engine?.react("player", Emotion.NEUTRAL, Gesture.NONE)
+            delay(1500)
+            _ui.update {
+                it.copy(rewinding = false, phase = Phase.IDLE, line = snap.line, suggestions = snap.suggestions.ifEmpty { AiParser.defaultReplies(it.language) },
+                    mood = snap.pt.mood, relationship = snap.pt.relationship, chapter = snap.pt.chapter, turnCount = snap.pt.turnCount, ended = snap.pt.ended,
+                    showChoices = settings.current.showSuggestions, canRewind = snapshots.isNotEmpty(), toast = "Rewound — try a different line")
+            }
         }
     }
 

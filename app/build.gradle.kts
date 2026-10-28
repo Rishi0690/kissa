@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -13,12 +15,16 @@ android {
         applicationId = "com.kissa.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0.0"
         vectorDrawables { useSupportLibrary = true }
+        // Base URL of the Kissa backend (Cloudflare Worker). Set with -PkissaBackendUrl=https://... or in
+        // ~/.gradle/gradle.properties. The placeholder makes the app show "AI service abhi setup nahi hai".
+        val backendUrl = (project.findProperty("kissaBackendUrl") as String?) ?: "https://kissa-backend.REPLACE-ME.workers.dev"
+        buildConfigField("String", "KISSA_BACKEND_URL", "\"" + backendUrl + "\"")
     }
 
-    val keystoreProps = java.util.Properties().apply {
+    val keystoreProps = Properties().apply {
         val f = rootProject.file("keystore.properties")
         if (f.exists()) f.inputStream().use { load(it) }
     }

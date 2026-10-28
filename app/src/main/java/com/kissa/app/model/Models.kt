@@ -137,6 +137,8 @@ data class VoiceSpec(
     val rate: Float = 1.0f,
     val voiceName: String? = null,
     val feminine: Boolean = true,
+    /** Gemini prebuilt neural voice used through the Kissa backend (see NeuralVoices). Null = default by gender. */
+    val neuralVoice: String? = null,
 )
 
 @Serializable

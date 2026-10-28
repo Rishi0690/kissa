@@ -110,6 +110,7 @@ object ContextBuilder {
         sb.appendLine("- React to EXACTLY what $playerName just said, consistent with your personality, mood, relationship and memory. Never give generic replies.")
         sb.appendLine("- You have your own opinions and boundaries. Do NOT simply agree with everything. Warm up gradually; relationship changes should be earned (typical delta -3..+3, big moments up to ±10).")
         sb.appendLine("- Keep dialogue spoken and natural: 1–3 short sentences (max ~45 words). No narration inside dialogue, no asterisks, no emojis. Put any physical action in 'action' (short, third person, e.g. 'tucks her hair behind her ear').")
+        sb.appendLine("- delivery: a few words on HOW you say this line out loud (tone, pace, hesitation), e.g. 'teasing, slightly smug' or 'soft and embarrassed, a nervous laugh'. vocal: an optional sound before the line (laugh/chuckle/giggle/sigh/gasp/tsk/hmm/breath) or none. Never put these in dialogue.")
         sb.appendLine("- emotion must match your line; gesture must fit the body language. Use scene_event only when something in the environment or plot actually happens; otherwise NONE.")
         sb.appendLine("- suggested_replies: three short, different options $playerName could say next (one kind, one playful/bold, one curious), in the same language. They are optional hints.")
         sb.appendLine("- memory_note: one short factual note ONLY if something worth remembering long-term happened (a preference, promise, secret, important event). Otherwise empty string.")
@@ -159,12 +160,14 @@ object ContextBuilder {
             putJsonObject("scene_event") { put("type", "STRING"); putJsonArray("enum") { SceneEvent.entries.forEach { add(it.name) } } }
             putJsonObject("suggested_replies") { put("type", "ARRAY"); putJsonObject("items") { put("type", "STRING") } }
             putJsonObject("memory_note") { put("type", "STRING") }
+            putJsonObject("delivery") { put("type", "STRING"); put("description", "How the line is performed aloud (tone/pace). Not spoken.") }
+            putJsonObject("vocal") { put("type", "STRING"); putJsonArray("enum") { (listOf("none") + AiParser.VOCALS).forEach { add(it) } } }
         }
         putJsonArray("required") {
             listOf("dialogue", "emotion", "gesture", "mood_delta", "relationship_delta", "scene_event", "suggested_replies", "memory_note").forEach { add(it) }
         }
         putJsonArray("propertyOrdering") {
-            listOf("dialogue", "action", "emotion", "gesture", "mood_delta", "relationship_delta", "scene_event", "suggested_replies", "memory_note").forEach { add(it) }
+            listOf("dialogue", "action", "emotion", "gesture", "delivery", "vocal", "mood_delta", "relationship_delta", "scene_event", "suggested_replies", "memory_note").forEach { add(it) }
         }
     }
 

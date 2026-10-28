@@ -37,7 +37,8 @@ public class Canvas {
   public void drawArc(float l, float t, float r, float b, float start, float sweep, boolean center, Paint p) { paint(new Arc2D.Float(l, t, r - l, b - t, -start, -sweep, center ? Arc2D.PIE : Arc2D.OPEN), p); }
   public void drawLine(float x1, float y1, float x2, float y2, Paint p) { Paint.Style s = p.style; p.style = Paint.Style.STROKE; paint(new Line2D.Float(x1, y1, x2, y2), p); p.style = s; }
   public void drawPoint(float x, float y, Paint p) {}
-  public void drawBitmap(Bitmap b, float x, float y, Paint p) { g.drawImage(b.img, (int) x, (int) y, null); }
-  public void drawBitmap(Bitmap b, Rect s, Rect d, Paint p) { g.drawImage(b.img, d.left, d.top, d.right, d.bottom, s.left, s.top, s.right, s.bottom, null); }
+  private Composite alphaOn(Paint p) { Composite old = g.getComposite(); float a = p == null ? 1f : p.getAlpha() / 255f; if (a < 0.999f) g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, a))); return old; }
+  public void drawBitmap(Bitmap b, float x, float y, Paint p) { Composite o = alphaOn(p); AffineTransform t = g.getTransform(); g.translate(x, y); g.drawImage(b.img, 0, 0, null); g.setTransform(t); g.setComposite(o); }
+  public void drawBitmap(Bitmap b, Rect s, Rect d, Paint p) { Composite o = alphaOn(p); g.drawImage(b.img, d.left, d.top, d.right, d.bottom, s.left, s.top, s.right, s.bottom, null); g.setComposite(o); }
   public void drawVertices(VertexMode m, int c, float[] v, int vo, float[] t, int to, int[] col, int co, short[] i, int io, int ic, Paint p) {}
 }

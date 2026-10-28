@@ -37,6 +37,7 @@ import com.kissa.app.ui.theme.LocalAccent
 import com.kissa.app.ui.theme.LocalPalette
 import com.kissa.app.ui.theme.Themes
 import com.kissa.app.voice.Utterance
+import com.kissa.app.voice.NeuralVoices
 import kotlinx.coroutines.launch
 
 @Composable
@@ -49,10 +50,10 @@ fun SettingsScreen(nav: NavController) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var keyInput by remember { mutableStateOf("") }
-    var proxy by remember(s.proxyUrl) { mutableStateOf(s.proxyUrl) }
+    val setup by app.ai.setup.collectAsStateWithLifecycle()
+    val voiceMode by app.speech.mode.collectAsStateWithLifecycle()
+    var showNeural by remember { mutableStateOf(false) }
     var name by remember(s.playerName) { mutableStateOf(s.playerName) }
-    var testResult by remember { mutableStateOf<String?>(null) }
-    var testing by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf<String?>(null) }
     var showPlayerVoices by remember { mutableStateOf(false) }
     val upd = app.settings::update
@@ -60,54 +61,48 @@ fun SettingsScreen(nav: NavController) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 130.dp)) {
         TopBar("Settings", if (nav.previousBackStackEntry != null && nav.previousBackStackEntry?.destination?.route?.startsWith("play") == true) ({ nav.popBackStack() }) else null)
         Column(Modifier.padding(horizontal = 20.dp)) {
-            // ------------------------------------------------ AI
-            Group("AI · Google Gemini", Icons.Rounded.Psychology) {
-                Text(if (s.hasApiKey) "✓ API key saved ${if (s.keyStorageSecure) "(encrypted on this device)" else "(device keystore unavailable — stored privately)"}" else "No API key yet. Get a free key at aistudio.google.com — sign in with Google, tap \"Create API key\", copy it here.",
-                    style = MaterialTheme.typography.bodySmall, color = if (s.hasApiKey) Color(0xFF6BF0B2) else pal.textDim)
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(keyInput, { keyInput = it.trim() }, Modifier.fillMaxWidth(), label = { Text(if (s.hasApiKey) "Replace API key" else "Paste Gemini API key") }, singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(autoCorrect = false))
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AccentButton("Save key", Modifier.weight(1f), enabled = keyInput.length > 10) { app.settings.setApiKey(keyInput); keyInput = ""; testResult = "Key saved." }
-                    GhostButton("Get a key", Modifier.weight(1f), Icons.Rounded.OpenInNew) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey"))) }
-                }
-                if (s.hasApiKey) TextButton(onClick = { confirm = "key" }) { Text("Remove saved key") }
-                Spacer(Modifier.height(8.dp))
-                Text("Model", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GeminiClient.MODELS.forEach { m -> KChip(m, s.model == m) { upd { putString("model", m) } } }
-                }
-                Text("Flash-Lite is fastest and cheapest. If a model isn't available for your key, Kissa automatically tries the next one.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(proxy, { proxy = it.trim() }, Modifier.fillMaxWidth(), label = { Text("Optional backend proxy URL") }, singleLine = true, placeholder = { Text("https://your-server.example.com") })
-                Text("If set, requests go to <proxy>/generate?model=… with the same JSON body and your key is NOT sent from the phone — the server holds it.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    GhostButton("Save proxy", Modifier.weight(1f)) { upd { putString("proxyUrl", proxy) }; testResult = if (proxy.isBlank()) "Proxy cleared — calling Gemini directly." else "Proxy saved." }
-                    GhostButton(if (testing) "Testing…" else "Test connection", Modifier.weight(1f), Icons.Rounded.NetworkCheck) {
-                        if (testing) return@GhostButton
-                        testing = true; testResult = null
-                        scope.launch {
-                            testResult = try {
-                                val raw = app.gemini.generate(app.settings.apiKey(), s.proxyUrl, s.model,
-                                    PromptPayload("Reply with a JSON object {\"ok\": true, \"line\": \"<a 5-word friendly greeting>\"}", listOf(PromptContent("user", "ping"))), null, 0.2, 200, attempts = 1)
-                                "✓ Connected to ${s.model}: ${raw.take(80)}"
-                            } catch (e: AiException) { "✗ ${e.message}" } catch (e: Exception) { "✗ ${e.message}" }
-                            testing = false
-                        }
+            // ------------------------------------------------ AI & voices status (no keys, no provider settings)
+            Group("Story AI & voices", Icons.Rounded.Psychology) {
+                SetupStatusCard(setup, onRetry = { app.ai.runSetup(force = true) })
+                if (com.kissa.app.BuildConfig.DEBUG) {
+                    // hidden developer override: debug builds only, never present in release
+                    Spacer(Modifier.height(12.dp))
+                    Text("Developer (debug build only)", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
+                    OutlinedTextField(keyInput, { keyInput = it.trim() }, Modifier.fillMaxWidth(), label = { Text(if (s.devKeySet) "Replace dev Gemini key" else "Dev Gemini key (bypasses backend)") }, singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(autoCorrect = false))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                        GhostButton("Save", Modifier.weight(1f)) { app.settings.setDevApiKey(keyInput); keyInput = ""; app.ai.runSetup(force = true) }
+                        if (s.devKeySet) GhostButton("Clear", Modifier.weight(1f)) { app.settings.setDevApiKey(null); app.ai.runSetup(force = true) }
                     }
+                    Text("Backend: ${com.kissa.app.BuildConfig.KISSA_BACKEND_URL}", style = MaterialTheme.typography.labelSmall, color = pal.textDim)
                 }
-                testResult?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
             }
 
             // ------------------------------------------------ Voice & audio
             Group("Voice & audio", Icons.Rounded.GraphicEq) {
                 Toggle("Characters speak aloud", s.characterVoicesOn) { v -> upd { putBoolean("characterVoicesOn", v) } }
+                Toggle("Natural voices", s.naturalVoices, if (voiceMode.premium) "Active — expressive neural voices from Kissa's server." else (voiceMode.reason ?: "Used whenever the voice service is available; otherwise the phone voice is used and labelled \"Basic voice\".")) { v -> upd { putBoolean("naturalVoices", v) } }
                 Toggle("Speak my typed lines aloud", s.speakPlayerLines) { v -> upd { putBoolean("speakPlayerLines", v) } }
                 Toggle("Play my real voice for voice messages", s.keepRealVoice, "Android 13+ records your voice while recognising it. On older phones your line is spoken with your synthetic voice.") { v -> upd { putBoolean("keepRealVoice", v) } }
                 Text("Volume ${(s.volume * 100).toInt()}%", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
                 Slider(s.volume, { v -> upd { putFloat("volume", v) } }, valueRange = 0f..1f)
-                Text("My synthetic voice", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
+                Text("My character's natural voice", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
+                val myNeural = NeuralVoices.forPlayer(s.playerNeuralVoice, s.playerBody)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GhostButton("Preview", Modifier.weight(1f), Icons.Rounded.VolumeUp) {
+                        app.speech.stop()
+                        val line = when (s.language) { Lang.HINDI -> "नमस्ते, मैं ${s.playerName} हूँ।"; Lang.ENGLISH -> "Hey, I'm ${s.playerName}. Nice to meet you."; Lang.HINGLISH -> "Hey, main ${s.playerName} hoon. Kaise ho?" }
+                        scope.launch { app.speech.play(Utterance("player", line, if (s.language == Lang.HINDI) "hi-IN" else s.language.ttsTag, s.playerVoiceName, s.playerBody == BodyType.FEM, s.playerPitch, s.playerRate,
+                            Emotion.HAPPY, neuralVoice = myNeural, lang = NeuralVoices.langCode(s.language))) }
+                    }
+                    GhostButton(if (showNeural) "Hide" else myNeural, Modifier.weight(1f), Icons.Rounded.RecordVoiceOver) { showNeural = !showNeural }
+                }
+                if (showNeural) {
+                    NeuralVoices.ALL.sortedBy { if ((s.playerBody == BodyType.FEM) == it.feminine) 0 else 1 }.forEach { v ->
+                        VoiceRow("${v.name} · ${v.trait}${if (v.feminine) " · F" else " · M"}", myNeural == v.name) { upd { putString("playerNeuralVoice", v.name) } }
+                    }
+                }
+                Text("Basic phone voice (fallback)", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
                 Text("Pitch ${"%.2f".format(s.playerPitch)}", style = MaterialTheme.typography.labelMedium, color = pal.textDim)
                 Slider(s.playerPitch, { v -> upd { putFloat("playerPitch", v) } }, valueRange = 0.6f..1.6f)
                 Text("Speed ${"%.2f".format(s.playerRate)}", style = MaterialTheme.typography.labelMedium, color = pal.textDim)
@@ -173,7 +168,7 @@ fun SettingsScreen(nav: NavController) {
 
             // ------------------------------------------------ Privacy
             Group("Privacy & data", Icons.Rounded.Shield) {
-                Text("Everything — stories, conversations, memories, voice recordings and your key — is stored only on this device. Your messages are sent to Google Gemini (or your proxy) to generate replies; speech recognition uses your phone's recogniser.",
+                Text("Everything — stories, conversations, memories and voice recordings — is stored only on this device. Lines are sent to Kissa's secure server (which uses Google Gemini) to generate replies and natural voices; speech recognition uses your phone's recogniser, with the server as a backup.",
                     style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                 Spacer(Modifier.height(8.dp))
                 Text("Reports filed: $reports (stored locally; reported lines are hidden from the story).", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
@@ -189,7 +184,7 @@ fun SettingsScreen(nav: NavController) {
             }
 
             Group("About", Icons.Rounded.Info) {
-                Text("Kissa ${BuildConfig.VERSION_NAME} — interactive animated stories. Original characters and art. AI by Google Gemini; voices by your device's text-to-speech engine.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+                Text("Kissa ${BuildConfig.VERSION_NAME} — interactive animated stories. Original characters and art. AI and natural voices by Google Gemini through Kissa's server; basic voice by your device's text-to-speech engine.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                 TextButton(onClick = { nav.navigate("onboarding") }) { Text("Show onboarding again") }
             }
         }
@@ -197,14 +192,14 @@ fun SettingsScreen(nav: NavController) {
 
     confirm?.let { what ->
         AlertDialog(onDismissRequest = { confirm = null },
-            title = { Text(when (what) { "key" -> "Remove API key?"; "memories" -> "Clear conversations & memories?"; else -> "Erase everything?" }) },
-            text = { Text(when (what) { "key" -> "Characters won't be able to reply until you add a key again."; "memories" -> "All playthroughs, transcripts, checkpoints, memories and voice recordings will be deleted. Your own stories and settings stay."; else -> "Deletes all data including your created stories, favourites, settings and API key." }) },
+            title = { Text(when (what) { "key" -> "Remove developer key?"; "memories" -> "Clear conversations & memories?"; else -> "Erase everything?" }) },
+            text = { Text(when (what) { "key" -> "The app will use the Kissa backend again."; "memories" -> "All playthroughs, transcripts, checkpoints, memories and voice recordings will be deleted. Your own stories and settings stay."; else -> "Deletes all data including your created stories, favourites, and settings." }) },
             confirmButton = {
                 TextButton(onClick = {
                     val w = what; confirm = null
                     scope.launch {
                         when (w) {
-                            "key" -> app.settings.setApiKey(null)
+                            "key" -> app.settings.setDevApiKey(null)
                             "memories" -> app.repo.clearAllMemories()
                             else -> { app.repo.clearEverything(); app.settings.resetAll(); nav.navigate("onboarding") { popUpTo(nav.graph.id) { inclusive = true } } }
                         }

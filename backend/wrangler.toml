@@ -1,0 +1,21 @@
+name = "kissa-backend"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Non-secret configuration (override with `wrangler deploy --var` or edit here).
+[vars]
+CHAT_MODELS = "gemini-3.5-flash-lite,gemini-3.8-flash,gemini-flash-latest,gemini-2.5-flash"
+TTS_MODELS = "gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts"
+LEGACY_TTS_MODELS = "gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts"
+STT_MODELS = "gemini-3.5-transcribe"
+
+# Secrets are NOT stored here. Set them with:
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put TOKEN_SECRET
+
+# Optional but recommended: shared rate-limit counters + health cache.
+# Create with `npx wrangler kv namespace create RATE_KV` and paste the id:
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "<paste id>"

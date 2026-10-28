@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +76,8 @@ fun SceneScreen(
     val speaking by vm.speech.speaking.collectAsStateWithLifecycle()
     val voiceState by vm.voice.state.collectAsStateWithLifecycle()
     val messages by vm.messages.collectAsStateWithLifecycle()
+    val voiceMode by vm.voiceMode.collectAsStateWithLifecycle()
+    val setup by vm.setup.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val accent = LocalAccent.current
     val pal = LocalPalette.current
@@ -110,6 +114,7 @@ fun SceneScreen(
     var showLog by remember { mutableStateOf(false) }
     var reportTarget by remember { mutableStateOf<Long?>(null) }
 
+    LaunchedEffect(ui.rankUp) { if (ui.rankUp != null) { delay(2600); vm.consumeRankUp() } }
     LaunchedEffect(ui.toast) {
         ui.toast?.let { android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_SHORT).show(); vm.consumeToast() }
     }
@@ -118,35 +123,67 @@ fun SceneScreen(
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         val engine = vm.engine
         if (ready && engine != null) {
-            SceneStage(engine, vm.speech.speaking, Modifier.fillMaxSize(), paused = !resumed)
+            SceneStage(engine, vm.speech.speaking, Modifier.fillMaxSize().pointerInput(Unit) {
+                detectTapGestures(onTap = { vm.skipLine() })
+            }, paused = !resumed)
         }
 
-        // ---------- top bar
-        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        // ---------- choice overlay: dimmed scene + numbered glass cards (optional; typing/mic stay available)
+        val choicesVisible = ui.showChoices && settings.showSuggestions && ui.suggestions.isNotEmpty() && ui.phase == Phase.IDLE &&
+            !ui.badTurn && !ui.rewinding && voiceState is VoiceInputState.Idle && ui.ending == null
+        AnimatedVisibility(choicesVisible, enter = fadeIn(tween(350)), exit = fadeOut(tween(250)), modifier = Modifier.fillMaxSize()) {
+            ChoiceOverlay(ui.suggestions, onPick = { vm.pickChoice(it) }, onDismiss = { vm.hideChoices() })
+        }
+
+        // ---------- bad turn: big red X, offer the VHS rewind
+        AnimatedVisibility(ui.badTurn && !ui.rewinding, enter = fadeIn(tween(200)) + scaleIn(initialScale = 1.6f, animationSpec = tween(260)), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+            BadTurnOverlay(ui.story?.character?.name?.substringBefore(' ') ?: "", onRewind = { vm.rewind() }, onContinue = { vm.dismissBadTurn() })
+        }
+        if (ui.rewinding) RewindOverlay()
+
+        // ---------- compact top bar: back, glass rank badge, voice status, menu
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp)) {
+            var showMeters by remember { mutableStateOf(false) }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconCircle(Icons.AutoMirrored.Rounded.ArrowBack, "Back", bg = Color.Black.copy(alpha = 0.35f)) { onBack() }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(ui.story?.title ?: "", style = MaterialTheme.typography.titleMedium.copy(fontFamily = DisplayFont), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val ch = ui.story?.chapters?.getOrNull(ui.chapter)
-                    Text(if (ui.ended) "Epilogue" else "Chapter ${ui.chapter + 1}${ch?.let { " · ${it.title}" } ?: ""}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.75f), maxLines = 1)
-                }
-                IconCircle(if (ui.continuousVoice) Icons.Rounded.RecordVoiceOver else Icons.Rounded.VoiceOverOff, "Voice conversation mode",
-                    bg = if (ui.continuousVoice) accent.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.35f)) { vm.toggleContinuous() }
+                IconCircle(Icons.AutoMirrored.Rounded.ArrowBack, "Back", size = 38.dp, bg = Color.Black.copy(alpha = 0.30f)) { onBack() }
                 Spacer(Modifier.width(8.dp))
-                IconCircle(Icons.Rounded.MoreVert, "Scene menu", bg = Color.Black.copy(alpha = 0.35f)) { showMenu = true }
+                RankBadge(ui.relationship, ui.rankUp != null) { showMeters = !showMeters }
+                Spacer(Modifier.weight(1f))
+                if (settings.characterVoicesOn && !voiceMode.premium && voiceMode.reason != null && setup.phase != com.kissa.app.ai.SetupState.Phase.CHECKING) {
+                    Text("Basic voice", Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.38f)).border(1.dp, Color(0x55FFC46B), RoundedCornerShape(50))
+                        .clickable { android.widget.Toast.makeText(ctx, voiceMode.reason, android.widget.Toast.LENGTH_LONG).show() }
+                        .padding(horizontal = 10.dp, vertical = 5.dp), style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFD58A))
+                    Spacer(Modifier.width(6.dp))
+                }
+                IconCircle(if (ui.continuousVoice) Icons.Rounded.RecordVoiceOver else Icons.Rounded.VoiceOverOff, "Voice conversation mode", size = 38.dp,
+                    bg = if (ui.continuousVoice) accent.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.30f)) { vm.toggleContinuous() }
+                Spacer(Modifier.width(6.dp))
+                IconCircle(Icons.Rounded.MoreVert, "Scene menu", size = 38.dp, bg = Color.Black.copy(alpha = 0.30f)) { showMenu = true }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.32f)).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Meter("Mood", ui.mood, Color(0xFFFFC46B), Modifier.weight(1f))
-                Spacer(Modifier.width(14.dp))
-                Meter("Bond with ${ui.story?.character?.name?.substringBefore(' ') ?: ""}", ui.relationship, accent, Modifier.weight(1f))
+            AnimatedVisibility(showMeters) {
+                Column(Modifier.padding(top = 8.dp).widthIn(max = 320.dp).clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.42f)).padding(12.dp)) {
+                    val ch = ui.story?.chapters?.getOrNull(ui.chapter)
+                    Text((ui.story?.title ?: "") + " · " + (if (ui.ended) "Epilogue" else "Chapter ${ui.chapter + 1}${ch?.let { " · ${it.title}" } ?: ""}"),
+                        style = MaterialTheme.typography.labelMedium, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(8.dp))
+                    Meter("Mood", ui.mood, Color(0xFFFFC46B), Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(6.dp))
+                    Meter("Bond with ${ui.story?.character?.name?.substringBefore(' ') ?: ""}", ui.relationship, accent, Modifier.fillMaxWidth())
+                }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             StatusPill(ui, speaking?.speakerId, voiceState, Modifier.align(Alignment.CenterHorizontally))
             AnimatedVisibility(ui.lastNote != null, enter = fadeIn() + slideInVertically(), exit = fadeOut(), modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Text("✦ ${ui.story?.character?.name?.substringBefore(' ')} will remember that", Modifier.padding(top = 6.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.4f)).padding(horizontal = 12.dp, vertical = 5.dp),
                     style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFE3A0))
+            }
+        }
+
+        // ---------- rank up
+        AnimatedVisibility(ui.rankUp != null, enter = fadeIn() + scaleIn(initialScale = 0.6f), exit = fadeOut(tween(500)), modifier = Modifier.align(Alignment.Center)) {
+            Column(Modifier.glass(alpha = 0.12f).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 26.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("RANK UP", style = MaterialTheme.typography.labelMedium, color = Color(0xFFFFE08A), fontWeight = FontWeight.Bold)
+                Text("PLAYER · ${ui.rankUp ?: ""}", style = MaterialTheme.typography.headlineSmall.copy(fontFamily = DisplayFont), color = Color.White)
             }
         }
 
@@ -163,24 +200,17 @@ fun SceneScreen(
             ui.error?.let { err ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xCC2A1520)).border(1.dp, Color(0x55FF7A90), RoundedCornerShape(18.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(err, style = MaterialTheme.typography.bodySmall, color = Color.White, modifier = Modifier.weight(1f))
-                    if (ui.errorNeedsKey) TextButton(onClick = onOpenSettings) { Text("Settings") }
+                    if (ui.errorNeedsKey || ui.errorIsSetup) TextButton(onClick = onOpenSettings) { Text("Status") }
                     if (ui.canRetry) TextButton(onClick = { vm.retry() }) { Text("Retry") }
                     IconButton(onClick = { vm.dismissError() }, modifier = Modifier.size(32.dp)) { Icon(Icons.Rounded.Close, "Dismiss", tint = Color.White) }
                 }
             }
             DialoguePanel(ui, speaking?.let { if (it.text == ui.line?.text) it.highlightEnd to it.hasWordEvents else null }, settings.subtitles, settings.subtitleScale,
                 onReplay = { vm.replayLine() }, onStop = { vm.stopAudio(); vm.stopReplay() }, onExpand = { showLog = true },
-                onReport = { ui.line?.takeIf { !it.isPlayer }?.let { reportTarget = it.messageId } }, isPlaying = speaking != null || ui.phase == Phase.REPLAY)
+                onReport = { ui.line?.takeIf { !it.isPlayer }?.let { reportTarget = it.messageId } }, isPlaying = speaking != null || ui.phase == Phase.REPLAY,
+                onRewind = if (ui.canRewind && ui.phase == Phase.IDLE && !ui.rewinding) ({ vm.rewind() }) else null,
+                onChoices = if (!ui.showChoices && settings.showSuggestions && ui.suggestions.isNotEmpty() && ui.phase == Phase.IDLE) ({ vm.showChoicesAgain() }) else null)
             Spacer(Modifier.height(8.dp))
-            if (settings.showSuggestions && ui.suggestions.isNotEmpty() && ui.phase == Phase.IDLE && voiceState !is VoiceInputState.Listening) {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ui.suggestions.forEach { s ->
-                        Text(s, Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f)).border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
-                            .clickable { input = s }.padding(horizontal = 14.dp, vertical = 8.dp), color = Color.White, style = MaterialTheme.typography.labelMedium, maxLines = 1)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
             when (val v = voiceState) {
                 is VoiceInputState.Listening, VoiceInputState.Processing -> RecordingBar(v, onCancel = { vm.voice.cancel() }, onDone = { vm.voice.finish() })
                 is VoiceInputState.Result -> if (!ui.continuousVoice) VoiceReview(v, onRetry = { vm.voice.consume(); mic() }, onSend = { text -> vm.voice.consume(); vm.send(text, if (text == v.text) v.audioPath else null) },
@@ -304,6 +334,7 @@ private fun StatusPill(ui: SceneUi, speaker: String?, voice: VoiceInputState, mo
 private fun DialoguePanel(
     ui: SceneUi, progress: Pair<Int, Boolean>?, subtitles: Boolean, scale: Float,
     onReplay: () -> Unit, onStop: () -> Unit, onExpand: () -> Unit, onReport: () -> Unit, isPlaying: Boolean,
+    onRewind: (() -> Unit)? = null, onChoices: (() -> Unit)? = null,
 ) {
     val line = ui.line ?: return
     val accent = LocalAccent.current
@@ -313,12 +344,14 @@ private fun DialoguePanel(
             .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.04f))), RoundedCornerShape(22.dp))
             .clickable(onClick = onExpand)
             .animateContentSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(line.speaker, Modifier.clip(RoundedCornerShape(50)).background((if (line.isPlayer) Color(0xFF6BF0B2) else accent).copy(alpha = 0.2f)).padding(horizontal = 10.dp, vertical = 3.dp),
                 color = if (line.isPlayer) Color(0xFF9CF7CF) else accent, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
+            if (onChoices != null) IconButton(onClick = onChoices, Modifier.size(34.dp)) { Icon(Icons.Rounded.Quiz, "Show reply choices", tint = Color.White.copy(alpha = 0.85f)) }
+            if (onRewind != null) IconButton(onClick = onRewind, Modifier.size(34.dp)) { Icon(Icons.Rounded.FastRewind, "Rewind last turn", tint = Color(0xFFFF8A9A)) }
             if (isPlaying) IconButton(onClick = onStop, Modifier.size(34.dp)) { Icon(Icons.Rounded.StopCircle, "Stop audio", tint = Color.White) }
             else IconButton(onClick = onReplay, Modifier.size(34.dp)) { Icon(Icons.Rounded.Replay, "Replay line", tint = Color.White.copy(alpha = 0.85f)) }
             if (!line.isPlayer) IconButton(onClick = onReport, Modifier.size(34.dp)) { Icon(Icons.Rounded.OutlinedFlag, "Report", tint = Color.White.copy(alpha = 0.5f)) }
@@ -332,7 +365,7 @@ private fun DialoguePanel(
                 withStyle(SpanStyle(color = Color.White)) { append(line.text.substring(0, end)) }
                 withStyle(SpanStyle(color = Color.White.copy(alpha = 0.45f))) { append(line.text.substring(end)) }
             }
-            Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = (17 * scale).sp, lineHeight = (24 * scale).sp), maxLines = 5, overflow = TextOverflow.Ellipsis)
+            Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = (17 * scale).sp, lineHeight = (24 * scale).sp), maxLines = 3, overflow = TextOverflow.Ellipsis)
         } else {
             Text(if (isPlaying) "🔊 speaking… (subtitles off)" else "Subtitles are off · tap to read", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
         }
@@ -444,3 +477,95 @@ private fun TranscriptSheet(messages: List<MessageEntity>, playerName: String, o
 }
 
 @Suppress("unused") private fun devanagari(t: String) = SpeechDirector.hasDevanagari(t)
+
+/** Small glass rank pill, top-left (reference: "PLAYER NOOB" -> "PLAYER PRO"). Tap to see mood/bond meters. */
+@Composable
+private fun RankBadge(relationship: Int, glowing: Boolean, onClick: () -> Unit) {
+    val rank = rankFor(relationship)
+    val inf = rememberInfiniteTransition(label = "rank")
+    val glow by inf.animateFloat(0.25f, 0.9f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "g")
+    val border = if (glowing) Color(0xFFFFE08A).copy(alpha = glow) else Color.White.copy(alpha = 0.22f)
+    Row(
+        Modifier.clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.06f))))
+            .border(1.dp, border, RoundedCornerShape(50)).clickable(onClick = onClick).padding(start = 6.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(22.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFFFFD36B), Color(0xFFFF7A90)))), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.SportsEsports, null, tint = Color(0xFF2A1420), modifier = Modifier.size(14.dp))
+        }
+        Spacer(Modifier.width(7.dp))
+        Column {
+            Text("PLAYER", style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, letterSpacing = 1.2.sp), color = Color.White.copy(alpha = 0.7f))
+            Text(rank, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = Color.White, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.width(34.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.18f))) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(relationship / 100f).background(Color(0xFFFFD36B)))
+        }
+    }
+}
+
+/** Dimmed scene with numbered glass choice cards, like the reference. Tap outside to type your own line instead. */
+@Composable
+private fun ChoiceOverlay(choices: List<String>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.35f), Color.Black.copy(alpha = 0.55f), Color.Black.copy(alpha = 0.35f))))
+        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onDismiss)) {
+        Column(Modifier.align(Alignment.Center).padding(horizontal = 26.dp).offset(y = (-40).dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            choices.take(3).forEachIndexed { i, c ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.09f))))
+                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.10f))), RoundedCornerShape(18.dp))
+                        .clickable { onPick(c) }.padding(horizontal = 14.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                        Text("${i + 1}", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(c, color = Color.White, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+                }
+            }
+            Text("…ya apna jawab type/bolo ↓", Modifier.align(Alignment.CenterHorizontally).clickable(onClick = onDismiss).padding(8.dp),
+                color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+/** Big red X after a turn that went badly, with the option to rewind (VHS) and try again. */
+@Composable
+private fun BadTurnOverlay(name: String, onRewind: () -> Unit, onContinue: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-50).dp)) {
+            androidx.compose.foundation.Canvas(Modifier.size(150.dp)) {
+                val st = androidx.compose.ui.graphics.drawscope.Stroke(width = size.width * 0.16f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                val red = Color(0xFFFF2D3F)
+                drawLine(red.copy(alpha = 0.35f), androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.22f), androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height * 0.90f), st.width * 1.5f, st.cap)
+                drawLine(red, androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.15f), androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.85f), st.width, st.cap)
+                drawLine(red, androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.85f), st.width, st.cap)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("Oops… $name ko ye pasand nahi aaya", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AccentButton("⏪  Rewind", Modifier.width(150.dp), onClick = onRewind)
+                GhostButton("Continue", Modifier.width(130.dp), null, onContinue)
+            }
+        }
+    }
+}
+
+/** On-screen VHS label while the rewind effect plays (the frame itself is distorted in the renderer). */
+@Composable
+private fun RewindOverlay() {
+    val inf = rememberInfiniteTransition(label = "vhs")
+    val blink by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "b")
+    var clock by remember { mutableIntStateOf(59) }
+    LaunchedEffect(Unit) { while (true) { delay(60); clock = (clock + 59) % 60 } }
+    Box(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
+        Text("⏪ REWIND", Modifier.align(Alignment.TopStart).padding(top = 48.dp), color = Color.White.copy(alpha = 0.4f + 0.6f * blink),
+            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontWeight = FontWeight.Bold))
+        Text("PLAY  00:00:${clock.toString().padStart(2, '0')}", Modifier.align(Alignment.BottomEnd).padding(bottom = 140.dp), color = Color.White.copy(alpha = 0.85f),
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+    }
+}

@@ -91,4 +91,22 @@ class AiParserTest {
         assertEquals(0, applyMeter(3, -10))
         assertEquals(52, applyMeter(50, 2))
     }
+
+    @Test fun parsesDeliveryAndVocalForNaturalTts() {
+        val r = ok("""{"dialogue":"Acha? Tum poetry padhte ho?","emotion":"amused","gesture":"head_tilt","delivery":"teasing, *slightly* smug <laugh>","vocal":"Chuckles","mood_delta":1,"relationship_delta":1,"scene_event":"NONE","suggested_replies":["a","b","c"]}""")
+        assertEquals("teasing, slightly smug laugh", r.turn.delivery)
+        assertEquals("chuckle", r.turn.vocal)
+        val n = ok("""{"dialogue":"Hmm.","emotion":"neutral","gesture":"none","delivery":"none","vocal":"dance","mood_delta":0,"relationship_delta":0,"scene_event":"NONE","suggested_replies":["a","b","c"]}""")
+        assertEquals(null, n.turn.delivery)
+        assertEquals(null, n.turn.vocal)
+        assertTrue(n.warnings.contains("unknown vocal"))
+        val long = ok("""{"dialogue":"Hi","emotion":"happy","gesture":"wave","delivery":"${"x".repeat(200)}","mood_delta":0,"relationship_delta":0,"scene_event":"NONE","suggested_replies":["a","b","c"]}""")
+        assertEquals(AiParser.MAX_DELIVERY, long.turn.delivery!!.length)
+    }
+
+    @Test fun schemaDeclaresDeliveryAndVocal() {
+        val props = ContextBuilder.responseSchema()["properties"].toString()
+        assertTrue(props.contains("delivery"))
+        assertTrue(props.contains("\"chuckle\""))
+    }
 }

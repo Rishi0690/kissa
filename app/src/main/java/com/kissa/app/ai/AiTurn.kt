@@ -17,6 +17,10 @@ data class AiTurn(
     val sceneEvent: SceneEvent,
     val suggestedReplies: List<String>,
     val memoryNote: String?,
+    /** How the line should be performed by neural TTS, e.g. "teasing, with a smirk". Never spoken. */
+    val delivery: String? = null,
+    /** Optional non-verbal vocal burst before the line (one of [AiParser.VOCALS]). */
+    val vocal: String? = null,
 )
 
 sealed class ParseResult {
@@ -33,6 +37,8 @@ object AiParser {
     const val MAX_DELTA = 10
     const val MAX_REPLY_LEN = 90
     const val MAX_NOTE = 220
+    const val MAX_DELIVERY = 80
+    val VOCALS = listOf("laugh", "chuckle", "giggle", "sigh", "gasp", "tsk", "hmm", "breath")
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -109,8 +115,24 @@ object AiParser {
             ?.takeIf { it.isNotEmpty() && !it.equals("none", true) && !it.equals("null", true) && it != "-" }
             ?.take(MAX_NOTE)
 
+        val delivery = o.str("delivery")?.replace(Regex("[<>|*]"), "")?.replace(Regex("\\s+"), " ")?.trim()
+            ?.takeIf { it.isNotEmpty() && !it.equals("none", true) }?.take(MAX_DELIVERY)
+        val vocal = o.str("vocal")?.trim()?.lowercase()?.let { v ->
+            when (v) {
+                in VOCALS -> v
+                "laughs", "laughing", "haha" -> "laugh"
+                "chuckles", "snicker", "snort" -> "chuckle"
+                "giggles" -> "giggle"
+                "sighs" -> "sigh"
+                "gasps" -> "gasp"
+                "scoff", "scoffs", "tch" -> "tsk"
+                "pause", "umm", "um", "hm" -> "hmm"
+                "", "none", "null" -> null
+                else -> null.also { warnings += "unknown vocal" }
+            }
+        }
         return ParseResult.Ok(
-            AiTurn(dialogue, action?.take(160), emotion, gesture, mood, rel, scene, filled, note),
+            AiTurn(dialogue, action?.take(160), emotion, gesture, mood, rel, scene, filled, note, delivery, vocal),
             warnings,
         )
     }

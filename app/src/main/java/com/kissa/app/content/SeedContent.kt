@@ -26,7 +26,7 @@ object SeedContent {
         goals = "Submit her poetry anthology to the college fest; win the inter-college slam this year",
         boundaries = "Not interested in instant romance. Won't share her number or personal details with someone she just met. Walks away from disrespect. Trust is earned slowly.",
         quirks = "Taps her pen when thinking, tucks hair behind ear when shy, raises one eyebrow when unimpressed",
-        voice = VoiceSpec(pitch = 1.18f, rate = 1.05f, feminine = true),
+        voice = VoiceSpec(pitch = 1.18f, rate = 1.05f, feminine = true, neuralVoice = "Leda"),
     )
 
     private val corridor = Story(
@@ -65,7 +65,7 @@ object SeedContent {
             goals = "Win a spot in a city baking competition next month",
             boundaries = "Keeps work and personal life separate; doesn't flirt with customers; respects people who respect her time.",
             quirks = "Wipes the counter when nervous, gives regulars nicknames based on their orders",
-            voice = VoiceSpec(pitch = 1.02f, rate = 0.98f, feminine = true),
+            voice = VoiceSpec(pitch = 1.02f, rate = 0.98f, feminine = true, neuralVoice = "Despina"),
         ),
         chapters = listOf(
             Chapter("Closing Time", "Survive her sarcasm and get her to actually make your drink."),
@@ -94,7 +94,7 @@ object SeedContent {
             goals = "Find the manuscript before it leaves the city at dawn",
             boundaries = "Never shares case details with suspects until they earn trust. Can't be bribed or charmed.",
             quirks = "Clicks her pen, narrows her eyes when she hears a lie, quotes Feluda ironically",
-            voice = VoiceSpec(pitch = 0.98f, rate = 1.02f, feminine = true),
+            voice = VoiceSpec(pitch = 0.98f, rate = 1.02f, feminine = true, neuralVoice = "Kore"),
         ),
         chapters = listOf(
             Chapter("Under Suspicion", "Convince Tara you're not the thief with consistent, believable answers."),
@@ -124,7 +124,7 @@ object SeedContent {
             goals = "Find out why the Heart Stone is dimming before the next moon",
             boundaries = "Won't let anyone harm the grove. Won't leave her post. Trust grows with kindness.",
             quirks = "Hovers when excited, mishears human slang, names everything",
-            voice = VoiceSpec(pitch = 1.3f, rate = 0.95f, feminine = true),
+            voice = VoiceSpec(pitch = 1.3f, rate = 0.95f, feminine = true, neuralVoice = "Vindemiatrix"),
         ),
         chapters = listOf(
             Chapter("The Stranger", "Convince Ira you mean no harm."),
@@ -153,7 +153,7 @@ object SeedContent {
             goals = "Restore power and get the crew home",
             boundaries = "Mission first. No flirting during emergencies. Won't cover up mistakes.",
             quirks = "Names every engine part, taps her visor when thinking",
-            voice = VoiceSpec(pitch = 1.05f, rate = 1.12f, feminine = true),
+            voice = VoiceSpec(pitch = 1.05f, rate = 1.12f, feminine = true, neuralVoice = "Zephyr"),
         ),
         chapters = listOf(
             Chapter("Blackout", "Explain what happened honestly and earn her trust."),
@@ -182,7 +182,7 @@ object SeedContent {
             goals = "Kill her first big ticketed show tonight",
             boundaries = "Jokes are fine, but cruelty isn't. Won't tolerate being belittled.",
             quirks = "Tests jokes on strangers, narrates her own life like a sitcom",
-            voice = VoiceSpec(pitch = 1.12f, rate = 1.15f, feminine = true),
+            voice = VoiceSpec(pitch = 1.12f, rate = 1.15f, feminine = true, neuralVoice = "Autonoe"),
         ),
         chapters = listOf(
             Chapter("The Swap", "Sort out the phone and umbrella mix-up."),
@@ -211,7 +211,7 @@ object SeedContent {
             goals = "Leave without breaking down; secretly wants to hear that the friendship will survive",
             boundaries = "Won't be guilt-tripped about leaving. Needs honesty, not drama.",
             quirks = "Skips stones when nervous, calls you by a childhood nickname",
-            voice = VoiceSpec(pitch = 0.88f, rate = 1.0f, feminine = false),
+            voice = VoiceSpec(pitch = 0.88f, rate = 1.0f, feminine = false, neuralVoice = "Achird"),
         ),
         chapters = listOf(
             Chapter("Old Jokes", "Reconnect through shared memories."),
@@ -240,7 +240,7 @@ object SeedContent {
             goals = "Win the inter-college robotics challenge",
             boundaries = "Won't do your share of the work. Respects effort over talent.",
             quirks = "Pushes up her glasses when annoyed, hums when concentrating",
-            voice = VoiceSpec(pitch = 1.15f, rate = 1.1f, feminine = true),
+            voice = VoiceSpec(pitch = 1.15f, rate = 1.1f, feminine = true, neuralVoice = "Erinome"),
         ),
         chapters = listOf(
             Chapter("The Plan", "Convince her you'll actually pull your weight."),

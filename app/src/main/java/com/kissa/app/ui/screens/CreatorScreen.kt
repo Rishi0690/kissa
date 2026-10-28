@@ -127,9 +127,8 @@ fun CreatorScreen(nav: NavController, editId: String?) {
         aiBusy = true; error = null
         scope.launch {
             try {
-                val st = app.settings.current
                 val sys = "You design original characters for an interactive story app. Return ONLY a JSON object with string fields: name, age, role, personality, speaking_style, background, likes, dislikes, goals, boundaries, quirks, feminine (\"true\"/\"false\"). Keep each field under 220 characters. Characters must be original, safe for teens, with clear boundaries and their own opinions. Story context: title='${draft.title}', premise='${draft.premise}', setting='${draft.setting.label}'."
-                val raw = app.gemini.generate(app.settings.apiKey(), st.proxyUrl, st.model, PromptPayload(sys, listOf(PromptContent("user", aiPrompt))), null, temperature = 0.9, maxTokens = 1200)
+                val raw = app.ai.generate(PromptPayload(sys, listOf(PromptContent("user", aiPrompt))), null, temperature = 0.9, maxTokens = 1200)
                 val obj = Json { isLenient = true }.parseToJsonElement(AiParser.extractJsonObject(raw) ?: error("no JSON")).jsonObject
                 fun f(k: String) = obj[k]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
                 if (f("name").isNotEmpty()) draft.cName = f("name")

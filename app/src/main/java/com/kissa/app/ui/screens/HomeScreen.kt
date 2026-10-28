@@ -58,6 +58,7 @@ fun HomeScreen(nav: NavController) {
     val playedGenres = continuing.flatMap { it.first.genres }.toSet()
     val recommended = stories.filter { s -> continuing.none { it.first.id == s.id } }
         .sortedByDescending { s -> s.genres.count { it in playedGenres } }.take(6)
+    val setup by KissaApp.instance.ai.setup.collectAsState()
     val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
@@ -70,14 +71,15 @@ fun HomeScreen(nav: NavController) {
                 IconCircle(Icons.Rounded.Search, "Search") { nav.navigate("discover") }
             }
         }
-        if (!settings.hasApiKey && settings.proxyUrl.isBlank()) item {
+        // honest, friendly status only when the AI service isn't fully ready (never asks for keys)
+        if (setup.phase != com.kissa.app.ai.SetupState.Phase.READY && setup.phase != com.kissa.app.ai.SetupState.Phase.CHECKING) item {
             GlassCard(Modifier.padding(horizontal = 20.dp, vertical = 6.dp).fillMaxWidth(), onClick = { nav.navigate("settings") }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Key, null, tint = LocalAccent.current)
+                    Icon(if (setup.chat) Icons.Rounded.RecordVoiceOver else Icons.Rounded.CloudOff, null, tint = LocalAccent.current)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Add your free Gemini key", style = MaterialTheme.typography.titleSmall)
-                        Text("Characters need it to think and reply. Tap to set it up.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+                        Text(if (setup.chat) "Basic voice for now" else "AI service offline", style = MaterialTheme.typography.titleSmall)
+                        Text(setup.message, style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                     Icon(Icons.Rounded.ChevronRight, null)
                 }

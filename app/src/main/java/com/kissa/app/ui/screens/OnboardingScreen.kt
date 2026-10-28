@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kissa.app.KissaApp
@@ -51,15 +50,14 @@ fun OnboardingScreen(onDone: () -> Unit) {
     var name by remember { mutableStateOf(s.playerName) }
     var body by remember { mutableStateOf(s.playerBody) }
     var lang by remember { mutableStateOf(s.language) }
-    var key by remember { mutableStateOf("") }
     val pal = LocalPalette.current
+    val setup by app.ai.setup.collectAsState()
 
     fun finish() {
         app.settings.update {
             putBoolean("onboarded", true); putString("playerName", name.trim().ifEmpty { "Aarav" })
             putString("playerBody", body.name); putString("language", lang.name)
         }
-        if (key.isNotBlank()) app.settings.setApiKey(key)
         onDone()
     }
 
@@ -71,8 +69,8 @@ fun OnboardingScreen(onDone: () -> Unit) {
                         Box(Modifier.fillMaxWidth().height(380.dp).clip(RoundedCornerShape(30.dp))) {
                             Image(painterResource(R.drawable.bg_corridor), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
-                            CharacterPortrait(SeedContent.stories.first().playerAppearance, Modifier.fillMaxHeight(0.75f).aspectRatio(0.8f).align(Alignment.BottomStart), Emotion.NEUTRAL, animate = true)
-                            CharacterPortrait(SeedContent.riya.appearance, Modifier.fillMaxHeight(0.78f).aspectRatio(0.8f).align(Alignment.BottomEnd), Emotion.AMUSED, animate = true, facing = -1f)
+                            PaintedPortrait("cast/kabir/stand.webp", Modifier.fillMaxHeight(0.82f).aspectRatio(0.67f).align(Alignment.BottomStart), ContentScale.Fit)
+                            PaintedPortrait("cast/riya/body.webp", Modifier.fillMaxHeight(0.86f).aspectRatio(0.75f).align(Alignment.BottomEnd), ContentScale.Fit)
                         }
                         Spacer(Modifier.height(26.dp))
                         Text("Kissa", style = MaterialTheme.typography.displaySmall)
@@ -105,19 +103,15 @@ fun OnboardingScreen(onDone: () -> Unit) {
                         Text("You can change all of this later in Settings, and pick a language per story.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                     else -> {
-                        Text("Bring characters to life", style = MaterialTheme.typography.headlineMedium)
+                        Text("Getting your stories ready", style = MaterialTheme.typography.headlineMedium)
                         Spacer(Modifier.height(10.dp))
-                        Text("Kissa's characters think with Google Gemini. Get a free API key from Google AI Studio (takes a minute with a Google account), then paste it here. It's stored encrypted on this phone and only sent to Google.",
+                        Text("Kissa sets up its story AI and natural voices for you in the background — there's nothing to configure.",
                             style = MaterialTheme.typography.bodyLarge, color = pal.textDim)
-                        Spacer(Modifier.height(14.dp))
-                        GhostButton("Open aistudio.google.com/apikey", Modifier.fillMaxWidth(), Icons.Rounded.OpenInNew) {
-                            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey")))
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        OutlinedTextField(key, { key = it.trim() }, Modifier.fillMaxWidth(), label = { Text("Gemini API key") }, singleLine = true,
-                            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(autoCorrect = false))
-                        Spacer(Modifier.height(10.dp))
-                        Text("No key yet? You can still explore every screen and add it later in Settings → AI.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+                        Spacer(Modifier.height(18.dp))
+                        SetupStatusCard(setup, onRetry = { app.ai.runSetup(force = true) })
+                        Spacer(Modifier.height(12.dp))
+                        Text("Your conversations stay on this phone. Lines are sent to Kissa's secure server only to generate replies and voices.",
+                            style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                 }
             }
@@ -130,7 +124,7 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 }
             }
             if (pager.currentPage < 2) AccentButton("Next") { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
-            else AccentButton(if (key.isBlank()) "Skip for now" else "Enter Kissa") { finish() }
+            else AccentButton(if (setup.phase == com.kissa.app.ai.SetupState.Phase.CHECKING) "Continue" else "Enter Kissa") { finish() }
         }
     }
 }

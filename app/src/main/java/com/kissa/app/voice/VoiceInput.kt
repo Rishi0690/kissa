@@ -14,6 +14,11 @@ import android.os.ParcelFileDescriptor
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +42,15 @@ sealed class VoiceInputState {
  * external audio source) we fall back to plain recognition and the player's line is voiced with TTS instead.
  * Must be used from the main thread.
  */
-class VoiceInput(private val ctx: Context, private val audioDir: File) {
+class VoiceInput(
+    private val ctx: Context,
+    private val audioDir: File,
+    /** Backend transcription fallback (Gemini on the Kissa backend). Null = on-device recognition only. */
+    private val serverStt: (suspend (File, String) -> String?)? = null,
+    private val scope: CoroutineScope? = null,
+) {
+    private var serverMode = false
+    private var sttJob: Job? = null
     private val _state = MutableStateFlow<VoiceInputState>(VoiceInputState.Idle)
     val state: StateFlow<VoiceInputState> = _state.asStateFlow()
 
@@ -62,8 +75,19 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
 
     fun start(langTag: String, keepAudio: Boolean) {
         cancel()
-        if (!available) { _state.value = VoiceInputState.Error("Speech recognition isn't available on this device. Install or enable Google speech services.", false); return }
         lastLang = langTag
+        serverMode = false
+        if (!available) {
+            if (serverStt != null && scope != null && startCapture(withPipe = false)) {
+                // no on-device recogniser: record ourselves, transcribe on the backend
+                serverMode = true; usingPipe = false
+                gotResult = false; heardSpeech = false; silenceSince = 0L
+                startedAt = System.currentTimeMillis()
+                _state.value = VoiceInputState.Listening("", 0f, true, startedAt)
+                return
+            }
+            _state.value = VoiceInputState.Error("Speech recognition isn't available on this device. Install or enable Google speech services.", false); return
+        }
         gotResult = false; heardSpeech = false; silenceSince = 0L
         startedAt = System.currentTimeMillis()
         val pipeMode = keepAudio && Build.VERSION.SDK_INT >= 33 && !pipeFailedOnce
@@ -77,7 +101,7 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1400L)
         }
-        if (pipeMode && startCapture()) {
+        if (pipeMode && startCapture(withPipe = true)) {
             usingPipe = true
             intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, pipeRead)
             intent.putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
@@ -98,11 +122,13 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
     fun finish() {
         if (_state.value !is VoiceInputState.Listening) return
         _state.value = VoiceInputState.Processing
+        if (serverMode) { transcribeOnServer(stopCapture(save = true)); return }
         if (usingPipe) closePipe() // end of stream tells the recognizer we're done
         runCatching { recognizer?.stopListening() }
     }
 
     fun cancel() {
+        sttJob?.cancel(); sttJob = null
         runCatching { recognizer?.cancel() }
         runCatching { recognizer?.destroy() }
         recognizer = null
@@ -113,33 +139,35 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
     fun consume() { _state.value = VoiceInputState.Idle }
 
     @SuppressLint("MissingPermission")
-    private fun startCapture(): Boolean {
+    private fun startCapture(withPipe: Boolean): Boolean {
         return try {
             val minBuf = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuf, 4096) * 2)
             if (rec.state != AudioRecord.STATE_INITIALIZED) { rec.release(); return false }
-            val pipe = ParcelFileDescriptor.createPipe()
-            pipeRead = pipe[0]; pipeWrite = pipe[1]
+            if (withPipe) {
+                val pipe = ParcelFileDescriptor.createPipe()
+                pipeRead = pipe[0]; pipeWrite = pipe[1]
+            }
             pcm = ByteArrayOutputStream()
             recording = true
             rec.startRecording()
-            val out = FileOutputStream(pipeWrite!!.fileDescriptor)
+            val out = pipeWrite?.let { FileOutputStream(it.fileDescriptor) }
             recordThread = Thread {
                 val buf = ByteArray(2048)
-                var pipeOpen = true
+                var pipeOpen = out != null
                 try {
                     while (recording) {
                         val n = rec.read(buf, 0, buf.size)
                         if (n <= 0) continue
                         synchronized(this) { pcm.write(buf, 0, n) }
-                        if (pipeOpen) try { out.write(buf, 0, n) } catch (e: Exception) { pipeOpen = false }
+                        if (pipeOpen) try { out!!.write(buf, 0, n) } catch (e: Exception) { pipeOpen = false }
                         val lvl = rms(buf, n)
                         main.post { onLevel(lvl) }
                         if (pcm.size() > SAMPLE_RATE * 2 * 60) { main.post { finish() }; break } // 60 s cap
                     }
                 } finally {
                     runCatching { rec.stop() }; runCatching { rec.release() }
-                    runCatching { out.close() }
+                    runCatching { out?.close() }
                 }
             }.apply { name = "kissa-mic"; start() }
             true
@@ -200,9 +228,12 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
             if (usingPipe) closePipe()
         }
         override fun onError(error: Int) {
-            val path = stopCapture(save = false)
+            val canFallback = serverStt != null && scope != null && usingPipe && heardSpeech &&
+                error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS && !gotResult
+            val path = stopCapture(save = canFallback)
             runCatching { recognizer?.destroy() }; recognizer = null
             if (gotResult) return
+            if (canFallback && path != null) { _state.value = VoiceInputState.Processing; transcribeOnServer(path); return }
             // The recogniser may not accept an external audio source: retry once in plain mode.
             if (usingPipe && System.currentTimeMillis() - startedAt < 1500 &&
                 error in listOf(SpeechRecognizer.ERROR_CLIENT, SpeechRecognizer.ERROR_AUDIO, SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, 13 /*CANNOT_LISTEN_TO_DOWNLOAD_EVENTS*/, 14)) {
@@ -225,6 +256,18 @@ class VoiceInput(private val ctx: Context, private val audioDir: File) {
             (_state.value as? VoiceInputState.Listening)?.let { if (text.isNotBlank()) _state.value = it.copy(partial = text) }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
+    }
+
+    /** Sends a recorded WAV to the backend transcriber; keeps the recording as the player's real voice. */
+    private fun transcribeOnServer(path: String?) {
+        val stt = serverStt; val sc = scope
+        if (path == null || stt == null || sc == null) { _state.value = VoiceInputState.Error("I didn't catch that. Try again?"); return }
+        sttJob = sc.launch {
+            val text = runCatching { withContext(Dispatchers.IO) { stt(File(path), lastLang) } }.getOrNull()?.trim().orEmpty()
+            _state.value = if (text.isEmpty()) {
+                File(path).delete(); VoiceInputState.Error("I couldn't understand that recording. Try again, or type instead.")
+            } else VoiceInputState.Result(text, path)
+        }
     }
 
     private fun message(code: Int) = when (code) {
