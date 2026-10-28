@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.kissa.app.BuildConfig
 import com.kissa.app.ai.DeviceTokenStore
 import com.kissa.app.model.BodyType
 import com.kissa.app.model.Lang
@@ -35,8 +34,14 @@ data class AppSettings(
     val playerNeuralVoice: String? = null,
     /** Use the backend's natural neural voices when available (falls back to the phone voice, clearly labelled). */
     val naturalVoices: Boolean = true,
-    /** Debug builds only: a developer Gemini key that bypasses the backend. Always false in release. */
-    val devKeySet: Boolean = false,
+    /** The user's own Gemini API key is saved (EncryptedSharedPreferences). Direct-key mode is the default. */
+    val apiKeySet: Boolean = false,
+    /** Last 4 characters of the saved key, for display only. */
+    val apiKeyHint: String = "",
+    /** Microsoft neural voice for the player's typed lines (null = default for the chosen body type). */
+    val playerEdgeVoice: String? = null,
+    /** Character voice engine: "auto" = Gemini (your key) while its free quota lasts, then Microsoft neural; "microsoft" = always Microsoft neural. */
+    val voiceEngine: String = "auto",
     val voiceOverrides: Map<String, String> = emptyMap(),
     val neuralOverrides: Map<String, String> = emptyMap(),
 )
@@ -60,14 +65,19 @@ class SettingsRepository(ctx: Context) : DeviceTokenStore {
     val state: StateFlow<AppSettings> = _state.asStateFlow()
     val current: AppSettings get() = _state.value
 
-    /** Developer override, honoured only in debug builds. Release builds never use a client-side provider key. */
-    fun devApiKey(): String? = if (!BuildConfig.DEBUG) null else secret.getString("dev_gemini_key", null)?.takeIf { it.isNotBlank() }
+    /** The user's Gemini API key (pasted in Onboarding/Settings), stored only in EncryptedSharedPreferences. */
+    fun apiKey(): String? = (secret.getString("gemini_api_key", null) ?: secret.getString("dev_gemini_key", null))?.trim()?.takeIf { it.isNotBlank() }
 
-    fun setDevApiKey(key: String?) {
-        if (!BuildConfig.DEBUG) return
-        secret.edit().apply { if (key.isNullOrBlank()) remove("dev_gemini_key") else putString("dev_gemini_key", key.trim()) }.apply()
+    fun setApiKey(key: String?) {
+        secret.edit().apply {
+            remove("dev_gemini_key")
+            if (key.isNullOrBlank()) remove("gemini_api_key") else putString("gemini_api_key", key.trim())
+        }.apply()
         _state.value = load()
     }
+
+    /** False if the device keystore failed and the key had to be kept in ordinary private prefs. */
+    val secureStorage: Boolean get() = secureOk
 
     // ---- DeviceTokenStore (anonymous backend registration)
     override fun installId(): String {
@@ -111,7 +121,10 @@ class SettingsRepository(ctx: Context) : DeviceTokenStore {
             reduceMotion = prefs.getBoolean("reduceMotion", d.reduceMotion),
             playerNeuralVoice = prefs.getString("playerNeuralVoice", null),
             naturalVoices = prefs.getBoolean("naturalVoices", d.naturalVoices),
-            devKeySet = devApiKey() != null,
+            apiKeySet = apiKey() != null,
+            apiKeyHint = apiKey()?.takeLast(4).orEmpty(),
+            playerEdgeVoice = prefs.getString("playerEdgeVoice", null),
+            voiceEngine = prefs.getString("voiceEngine", d.voiceEngine) ?: d.voiceEngine,
             voiceOverrides = overrides,
             neuralOverrides = neural,
         )
@@ -135,7 +148,7 @@ class SettingsRepository(ctx: Context) : DeviceTokenStore {
         prefs.edit().clear().apply()
         // keep the anonymous install id + device token: they are not personal data and re-registering is pointless
         install?.let { prefs.edit().putString("install_id", it).apply() }
-        secret.edit().remove("dev_gemini_key").apply()
+        secret.edit().remove("dev_gemini_key").remove("gemini_api_key").apply()
         _state.value = load()
     }
 }

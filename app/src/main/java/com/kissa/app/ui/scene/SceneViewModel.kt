@@ -80,7 +80,8 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
     private val settings = app.settings
     val speech: SpeechDirector = app.speech
     val voice = VoiceInput(app, repo.audioDir(),
-        serverStt = if (app.backend.configured) { file, _ -> app.backend.stt(file.readBytes(), NeuralVoices.langCode(_ui.value.language)) } else null,
+        serverStt = if (app.backend.configured) { file, _ -> app.backend.stt(file.readBytes(), NeuralVoices.langCode(_ui.value.language)) }
+            else { file, _ -> app.ai.userKey()?.let { k -> app.gemini.transcribe(k, file.readBytes(), NeuralVoices.langCode(_ui.value.language)) } },
         scope = viewModelScope)
     val voiceMode = speech.mode
     val setup = app.ai.setup
@@ -113,7 +114,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 }
             }
         }
-        viewModelScope.launch { settings.state.collect { speech.volume = it.volume; speech.naturalVoicesEnabled = it.naturalVoices; engine?.reduceMotion = it.reduceMotion } }
+        viewModelScope.launch { settings.state.collect { speech.volume = it.volume; speech.naturalVoicesEnabled = it.naturalVoices; speech.geminiVoicesEnabled = it.voiceEngine != "microsoft"; engine?.reduceMotion = it.reduceMotion } }
     }
 
     private suspend fun load() {
@@ -222,7 +223,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
                 onFailure = { err ->
                     lastFailedInput = text to audioPath
                     val kind = (err as? AiException)?.kind
-                    val needsKey = kind == AiException.Kind.NO_KEY
+                    val needsKey = kind == AiException.Kind.NO_KEY || (kind == AiException.Kind.AUTH && !app.ai.backendMode)
                     val isSetup = kind == AiException.Kind.SERVICE_SETUP
                     eng.react(story.character.id, Emotion.CONFUSED, Gesture.HEAD_TILT)
                     _ui.update {
@@ -243,14 +244,16 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         val st = settings.current
         val v = story.character.voice
         return Utterance(story.character.id, text, localeFor(text), st.voiceOverrides[story.character.id] ?: v.voiceName, v.feminine, v.pitch, v.rate, emotion,
-            neuralVoice = NeuralVoices.forCharacter(story.character, st.neuralOverrides[story.character.id]), delivery = delivery, vocal = vocal, lang = langCode())
+            neuralVoice = NeuralVoices.forCharacter(story.character, st.neuralOverrides[story.character.id]), delivery = delivery, vocal = vocal, lang = langCode(),
+            edgeVoice = NeuralVoices.edgeForCharacter(story.character, st.neuralOverrides[story.character.id], st.playerEdgeVoice, st.playerBody), useGemini = true)
     }
 
     /** The player's line: their real recording when they spoke, otherwise their chosen natural voice. */
     private fun playerUtterance(text: String, emotion: Emotion, audioPath: String?): Utterance {
         val st = settings.current
         return Utterance("player", text, localeFor(text), st.playerVoiceName, st.playerBody == BodyType.FEM, st.playerPitch, st.playerRate, emotion, audioPath,
-            neuralVoice = NeuralVoices.forPlayer(st.playerNeuralVoice, st.playerBody), lang = langCode())
+            neuralVoice = NeuralVoices.forPlayer(st.playerNeuralVoice, st.playerBody), lang = langCode(),
+            edgeVoice = com.kissa.app.voice.engines.EdgeTts.playerVoice(st.playerEdgeVoice, st.playerBody == BodyType.FEM), useGemini = false)
     }
 
     private fun friendlyError(e: Throwable): String {
@@ -258,9 +261,9 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         return when ((e as? AiException)?.kind) {
             AiException.Kind.SERVICE_SETUP -> "AI service abhi setup nahi hai — $name will talk as soon as it's switched on. Tap retry later."
             AiException.Kind.SERVICE_LIMIT -> "Aaj ki AI limit khatam ho gayi hai. $name will be back soon — try again later."
-            AiException.Kind.NO_KEY -> "Developer key missing (debug build)."
-            AiException.Kind.AUTH -> "Couldn't verify this device with the AI service. Tap retry."
-            AiException.Kind.QUOTA -> "$name needs a breather (too many messages too fast). Tap retry in a few seconds."
+            AiException.Kind.NO_KEY -> "$name needs your Gemini API key to talk. Add it in Settings → Story AI (free at aistudio.google.com/apikey)."
+            AiException.Kind.AUTH -> if (app.ai.backendMode) "Couldn't verify this device with the AI service. Tap retry." else "Your Gemini key was rejected. Check it in Settings → Story AI."
+            AiException.Kind.QUOTA -> if (app.ai.backendMode) "$name needs a breather (too many messages too fast). Tap retry in a few seconds." else "Your Gemini key hit its free limit (per-minute or daily). Wait a bit and tap retry."
             AiException.Kind.NETWORK -> "$name can't hear you — aap offline lag rahe ho. Tap retry when you're connected."
             AiException.Kind.TIMEOUT -> "$name is lost in thought (the AI is slow right now). Tap retry."
             AiException.Kind.BLOCKED -> "$name won't go there. Try saying something else."
@@ -330,7 +333,7 @@ class SceneViewModel(private val storyId: String, private val replayCheckpoint: 
         val utter = characterUtterance(turn.dialogue, turn.emotion, turn.delivery, turn.vocal)
         deliveries[msgId] = turn.delivery to turn.vocal
         // keep "thinking" until her natural-voice audio is ready, so the mouth never moves over silence
-        if (st.characterVoicesOn) withTimeoutOrNull(12_000) { speech.neuralFile(utter) }
+        if (st.characterVoicesOn) withTimeoutOrNull(22_000) { speech.neuralFile(utter) }
 
         eng.react(story.character.id, turn.emotion, turn.gesture)
         eng.react("player", mirror(turn.emotion), Gesture.NONE)

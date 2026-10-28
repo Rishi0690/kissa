@@ -27,15 +27,16 @@ import com.kissa.app.ui.theme.LocalAccent
 import com.kissa.app.ui.theme.LocalPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /**
- * Friendly status of the automatic setup (no keys, no provider names): story AI, natural voices, voice input.
- * Honest about what is and isn't working; offers a retry when something isn't ready.
+ * Honest status of the AI services: story AI (your Gemini key, or the Kissa server in backend mode), natural voices
+ * and voice input. Offers a retry when something isn't ready. Never claims a service works when it hasn't been checked.
  */
 @Composable
-fun SetupStatusCard(state: SetupState, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    val pal = LocalPalette.current
+fun SetupStatusCard(state: SetupState, onRetry: () -> Unit, modifier: Modifier = Modifier, voiceNote: String? = null) {
     val checking = state.phase == SetupState.Phase.CHECKING
+    val direct = state.mode == SetupState.Mode.DIRECT
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.White.copy(alpha = 0.06f))
         .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(22.dp)).padding(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -43,20 +44,107 @@ fun SetupStatusCard(state: SetupState, onRetry: () -> Unit, modifier: Modifier =
                 if (state.phase == SetupState.Phase.READY) Icons.Rounded.CheckCircle else Icons.Rounded.Info, null,
                 tint = if (state.phase == SetupState.Phase.READY) Color(0xFF6BF0B2) else Color(0xFFFFC46B))
             Spacer(Modifier.width(10.dp))
-            Text(state.message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(state.message, style = MaterialTheme.typography.bodyMedium, color = LocalPalette.current.text, modifier = Modifier.weight(1f))
         }
         Spacer(Modifier.height(14.dp))
-        StatusRow(Icons.Rounded.AutoStories, "Story AI", state.chat, checking)
-        StatusRow(Icons.Rounded.RecordVoiceOver, if (state.voice) "Natural voices" else "Natural voices (basic phone voice until ready)", state.voice, checking)
-        StatusRow(Icons.Rounded.Mic, "Voice input", true, false, note = if (state.listening) "phone + cloud backup" else "phone recogniser")
-        if (!checking && state.phase != SetupState.Phase.READY && state.phase != SetupState.Phase.DEV_OVERRIDE) {
+        StatusRow(Icons.Rounded.AutoStories, "Story AI", state.chat, checking,
+            note = when {
+                !direct -> "Kissa server"
+                !state.keySet -> "needs your Gemini API key"
+                state.chat -> "Gemini (your key)${state.model?.let { " · $it" } ?: ""}"
+                state.phase == SetupState.Phase.KEY_INVALID -> "key rejected"
+                else -> "Gemini (your key) · not reachable yet"
+            })
+        StatusRow(Icons.Rounded.RecordVoiceOver, "Natural voices", state.voice, checking && !direct,
+            note = voiceNote ?: if (direct) "Gemini voices with your key, Microsoft neural voices as free backup" else if (state.voice) "Gemini voices (server)" else "basic phone voice until ready")
+        StatusRow(Icons.Rounded.Mic, "Voice input", true, false, note = if (state.listening) "phone recogniser + Gemini backup" else "phone recogniser")
+        val needsRetry = !checking && state.phase != SetupState.Phase.READY && state.phase != SetupState.Phase.NEEDS_KEY
+        if (needsRetry) {
             Spacer(Modifier.height(10.dp))
             GhostButton("Try again", Modifier.fillMaxWidth(), Icons.Rounded.Refresh, onRetry)
         }
-        if (state.phase == SetupState.Phase.NOT_SET_UP) {
-            Spacer(Modifier.height(8.dp))
-            Text("Nothing for you to configure — no keys or accounts needed. The Kissa team switches the AI service on from their side.",
+    }
+}
+
+/**
+ * Paste-your-own Gemini key card (direct mode, the default). Tests the key with a real request before saving it;
+ * the key is stored in EncryptedSharedPreferences and only ever sent to Google's Gemini API.
+ */
+@Composable
+fun ApiKeyCard(modifier: Modifier = Modifier, compact: Boolean = false) {
+    val app = com.kissa.app.KissaApp.instance
+    val s by app.settings.state.collectAsState()
+    val pal = LocalPalette.current
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var input by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var editing by remember(s.apiKeySet) { mutableStateOf(!s.apiKeySet) }
+
+    fun explain(e: Throwable): String = when ((e as? com.kissa.app.ai.AiException)?.kind) {
+        com.kissa.app.ai.AiException.Kind.AUTH, com.kissa.app.ai.AiException.Kind.NO_KEY -> "Google rejected this key. Copy it again from aistudio.google.com/apikey."
+        com.kissa.app.ai.AiException.Kind.NETWORK, com.kissa.app.ai.AiException.Kind.TIMEOUT -> "Couldn't reach Google — check your internet and test again."
+        com.kissa.app.ai.AiException.Kind.QUOTA -> "The key is valid, but its free limit is used up right now."
+        com.kissa.app.ai.AiException.Kind.BAD_RESPONSE -> "Google answered oddly: ${e.message?.take(90)}"
+        else -> "Test failed: ${e.message?.take(90) ?: "unknown error"}"
+    }
+
+    fun test(key: String, save: Boolean) {
+        if (key.isBlank() || busy) return
+        busy = true; result = null
+        scope.launch {
+            val r = app.ai.testKey(key)
+            busy = false
+            r.onSuccess { model ->
+                if (save) { app.settings.setApiKey(key); input = ""; editing = false; app.speech.geminiTts.resetQuotaMarks() }
+                result = true to "Connected — Gemini answered ($model)."
+                app.ai.runSetup(force = true)
+            }.onFailure { e ->
+                val quota = (e as? com.kissa.app.ai.AiException)?.kind == com.kissa.app.ai.AiException.Kind.QUOTA
+                if (save && quota) { app.settings.setApiKey(key); input = ""; editing = false; app.ai.runSetup(force = true) }
+                result = false to explain(e) + if (save && quota) " Saved anyway." else ""
+            }
+        }
+    }
+
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.White.copy(alpha = 0.06f))
+        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(22.dp)).padding(18.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Key, null, tint = LocalAccent.current)
+            Spacer(Modifier.width(10.dp))
+            Text("Your Gemini API key", style = MaterialTheme.typography.titleSmall, color = pal.text, modifier = Modifier.weight(1f))
+            if (s.apiKeySet) Text("•••• ${s.apiKeyHint}", style = MaterialTheme.typography.labelMedium, color = pal.textDim)
+        }
+        if (!compact || !s.apiKeySet) {
+            Spacer(Modifier.height(6.dp))
+            Text("Kissa talks to Google Gemini with your own free key. It is stored encrypted on this phone and sent only to Google.",
                 style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+        }
+        if (editing) {
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(input, { input = it.trim() }, Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text(if (s.apiKeySet) "Paste a new key" else "Paste your key (starts with AIza…)") },
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrect = false))
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AccentButton(if (busy) "Testing…" else "Test & save", Modifier.weight(1f), Icons.Rounded.Bolt, enabled = input.length >= 20 && !busy) { test(input, save = true) }
+                if (s.apiKeySet) GhostButton("Cancel", Modifier.weight(0.7f)) { editing = false; input = "" }
+            }
+            TextButton(onClick = {
+                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://aistudio.google.com/apikey"))) }
+            }) { Text("Get a free key at aistudio.google.com/apikey") }
+        } else {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GhostButton(if (busy) "Testing…" else "Test connection", Modifier.weight(1.2f), Icons.Rounded.NetworkCheck) { app.settings.apiKey()?.let { test(it, save = false) } }
+                GhostButton("Replace", Modifier.weight(0.8f)) { editing = true; result = null }
+            }
+            if (!compact) TextButton(onClick = { app.settings.setApiKey(null); result = null; app.ai.runSetup(force = true) }) { Text("Remove key from this phone") }
+        }
+        result?.let { (ok, msg) ->
+            Text(msg, style = MaterialTheme.typography.bodySmall, color = if (ok) Color(0xFF6BF0B2) else Color(0xFFFFC46B), modifier = Modifier.padding(top = 6.dp))
         }
     }
 }
@@ -67,7 +155,7 @@ private fun StatusRow(icon: ImageVector, label: String, ok: Boolean, checking: B
         Icon(icon, null, tint = LocalAccent.current, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = LocalPalette.current.text)
             note?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = LocalPalette.current.textDim) }
         }
         when {

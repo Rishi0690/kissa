@@ -46,6 +46,7 @@ fun CharacterProfileScreen(nav: NavController, storyId: String) {
     val pal = LocalPalette.current
     var emotion by remember { mutableStateOf(Emotion.HAPPY) }
     var showVoices by remember { mutableStateOf(false) }
+    var showNeural by remember { mutableStateOf(false) }
     val s = story ?: run { TopBar("Character", { nav.popBackStack() }); return }
     val c = s.character
     DisposableEffect(Unit) { onDispose { app.speech.stop() } }
@@ -59,7 +60,11 @@ fun CharacterProfileScreen(nav: NavController, storyId: String) {
         val loc = if (sample.any { it in '\u0900'..'\u097F' }) "hi-IN" else (if (s.isCustom) s.language else settings.language).ttsTag
         app.speech.stop()
         scope.launch {
-            app.speech.play(Utterance(c.id, sample, loc, settings.voiceOverrides[c.id] ?: c.voice.voiceName, c.voice.feminine, c.voice.pitch, c.voice.rate, emotion))
+            // natural preview with the character's fixed Microsoft neural voice (keeps the small Gemini voice quota for the story)
+            app.speech.play(Utterance(c.id, sample, loc, settings.voiceOverrides[c.id] ?: c.voice.voiceName, c.voice.feminine, c.voice.pitch, c.voice.rate, emotion,
+                neuralVoice = com.kissa.app.voice.NeuralVoices.forCharacter(c, settings.neuralOverrides[c.id]),
+                edgeVoice = com.kissa.app.voice.NeuralVoices.edgeForCharacter(c, settings.neuralOverrides[c.id], settings.playerEdgeVoice, settings.playerBody),
+                lang = com.kissa.app.voice.NeuralVoices.langCode(if (s.isCustom) s.language else settings.language)))
         }
     }
 
@@ -102,12 +107,34 @@ fun CharacterProfileScreen(nav: NavController, storyId: String) {
             InfoBlock("Goals", c.goals)
             InfoBlock("Boundaries", c.boundaries)
             if (c.quirks.isNotBlank()) InfoBlock("Quirks", c.quirks)
+            val gem = com.kissa.app.voice.NeuralVoices.forCharacter(c, settings.neuralOverrides[c.id])
+            val ms = com.kissa.app.voice.NeuralVoices.edgeForCharacter(c, settings.neuralOverrides[c.id], settings.playerEdgeVoice, settings.playerBody)
+            GlassCard(Modifier.fillMaxWidth(), onClick = { showNeural = !showNeural }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.GraphicEq, null, tint = LocalAccent.current)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Natural voice", style = MaterialTheme.typography.titleSmall)
+                        Text("Gemini: $gem · backup: Microsoft ${ms.label}", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+                    }
+                    IconButton(onClick = { preview() }) { Icon(Icons.Rounded.VolumeUp, "Preview voice") }
+                    Icon(if (showNeural) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
+                }
+                if (showNeural) {
+                    Spacer(Modifier.height(8.dp))
+                    VoiceRow("Automatic", settings.neuralOverrides[c.id] == null) { app.settings.setCharacterNeuralVoice(c.id, null) }
+                    com.kissa.app.voice.NeuralVoices.ALL.sortedBy { if (it.feminine == c.voice.feminine) 0 else 1 }.forEach { v ->
+                        VoiceRow("${v.name} · ${v.trait}${if (v.feminine) " · F" else " · M"}", settings.neuralOverrides[c.id] == v.name) { app.settings.setCharacterNeuralVoice(c.id, v.name) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
             GlassCard(Modifier.fillMaxWidth(), onClick = { showVoices = !showVoices }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.RecordVoiceOver, null, tint = LocalAccent.current)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Voice", style = MaterialTheme.typography.titleSmall)
+                        Text("Basic phone voice (fallback)", style = MaterialTheme.typography.titleSmall)
                         Text(settings.voiceOverrides[c.id] ?: "Automatic (${if (c.voice.feminine) "feminine" else "masculine"}, pitch ${"%.2f".format(c.voice.pitch)})", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                     Icon(if (showVoices) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)

@@ -49,7 +49,8 @@ fun SettingsScreen(nav: NavController) {
     val pal = LocalPalette.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var keyInput by remember { mutableStateOf("") }
+    val edgeOk by app.speech.edgeReachable.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { if (!app.ai.backendMode && app.speech.edgeReachable.value != true) app.speech.checkMicrosoftVoice() }
     val setup by app.ai.setup.collectAsStateWithLifecycle()
     val voiceMode by app.speech.mode.collectAsStateWithLifecycle()
     var showNeural by remember { mutableStateOf(false) }
@@ -61,48 +62,54 @@ fun SettingsScreen(nav: NavController) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 130.dp)) {
         TopBar("Settings", if (nav.previousBackStackEntry != null && nav.previousBackStackEntry?.destination?.route?.startsWith("play") == true) ({ nav.popBackStack() }) else null)
         Column(Modifier.padding(horizontal = 20.dp)) {
-            // ------------------------------------------------ AI & voices status (no keys, no provider settings)
+            // ------------------------------------------------ AI & voices status
             Group("Story AI & voices", Icons.Rounded.Psychology) {
-                SetupStatusCard(setup, onRetry = { app.ai.runSetup(force = true) })
-                if (com.kissa.app.BuildConfig.DEBUG) {
-                    // hidden developer override: debug builds only, never present in release
-                    Spacer(Modifier.height(12.dp))
-                    Text("Developer (debug build only)", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
-                    OutlinedTextField(keyInput, { keyInput = it.trim() }, Modifier.fillMaxWidth(), label = { Text(if (s.devKeySet) "Replace dev Gemini key" else "Dev Gemini key (bypasses backend)") }, singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(autoCorrect = false))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                        GhostButton("Save", Modifier.weight(1f)) { app.settings.setDevApiKey(keyInput); keyInput = ""; app.ai.runSetup(force = true) }
-                        if (s.devKeySet) GhostButton("Clear", Modifier.weight(1f)) { app.settings.setDevApiKey(null); app.ai.runSetup(force = true) }
-                    }
-                    Text("Backend: ${com.kissa.app.BuildConfig.KISSA_BACKEND_URL}", style = MaterialTheme.typography.labelSmall, color = pal.textDim)
-                }
+                if (!app.ai.backendMode) { ApiKeyCard(); Spacer(Modifier.height(12.dp)) }
+                SetupStatusCard(setup, onRetry = { app.ai.runSetup(force = true) }, voiceNote = voiceMode.engine?.let { "now: ${it.label}" })
             }
 
             // ------------------------------------------------ Voice & audio
             Group("Voice & audio", Icons.Rounded.GraphicEq) {
                 Toggle("Characters speak aloud", s.characterVoicesOn) { v -> upd { putBoolean("characterVoicesOn", v) } }
-                Toggle("Natural voices", s.naturalVoices, if (voiceMode.premium) "Active — expressive neural voices from Kissa's server." else (voiceMode.reason ?: "Used whenever the voice service is available; otherwise the phone voice is used and labelled \"Basic voice\".")) { v -> upd { putBoolean("naturalVoices", v) } }
+                Toggle("Natural voices", s.naturalVoices, if (!s.naturalVoices) "Off — the phone's basic voice is used." else
+                    "Expressive neural voices; if none can be reached the phone voice is used and labelled \"Basic voice\".") { v -> upd { putBoolean("naturalVoices", v) } }
+                if (s.naturalVoices) VoiceEngines(s.voiceEngine, s.apiKeySet, voiceMode, edgeOk, app.ai.backendMode,
+                    geminiFreeAt = if (app.speech.geminiTts.available()) null else app.speech.geminiTts.nextAvailableAt()) { v -> upd { putString("voiceEngine", v) } }
                 Toggle("Speak my typed lines aloud", s.speakPlayerLines) { v -> upd { putBoolean("speakPlayerLines", v) } }
-                Toggle("Play my real voice for voice messages", s.keepRealVoice, "Android 13+ records your voice while recognising it. On older phones your line is spoken with your synthetic voice.") { v -> upd { putBoolean("keepRealVoice", v) } }
+                Toggle("Play my real voice for voice messages", s.keepRealVoice, "Android 13+ records your voice while recognising it. On older phones your line is spoken with your chosen voice.") { v -> upd { putBoolean("keepRealVoice", v) } }
                 Text("Volume ${(s.volume * 100).toInt()}%", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
                 Slider(s.volume, { v -> upd { putFloat("volume", v) } }, valueRange = 0f..1f)
                 Text("My character's natural voice", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 6.dp))
-                val myNeural = NeuralVoices.forPlayer(s.playerNeuralVoice, s.playerBody)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GhostButton("Preview", Modifier.weight(1f), Icons.Rounded.VolumeUp) {
-                        app.speech.stop()
-                        val line = when (s.language) { Lang.HINDI -> "नमस्ते, मैं ${s.playerName} हूँ।"; Lang.ENGLISH -> "Hey, I'm ${s.playerName}. Nice to meet you."; Lang.HINGLISH -> "Hey, main ${s.playerName} hoon. Kaise ho?" }
-                        scope.launch { app.speech.play(Utterance("player", line, if (s.language == Lang.HINDI) "hi-IN" else s.language.ttsTag, s.playerVoiceName, s.playerBody == BodyType.FEM, s.playerPitch, s.playerRate,
-                            Emotion.HAPPY, neuralVoice = myNeural, lang = NeuralVoices.langCode(s.language))) }
+                val line = when (s.language) { Lang.HINDI -> "नमस्ते, मैं ${s.playerName} हूँ।"; Lang.ENGLISH -> "Hey, I'm ${s.playerName}. Nice to meet you."; Lang.HINGLISH -> "Hey, main ${s.playerName} hoon. Kaise ho?" }
+                if (app.ai.backendMode) {
+                    val myNeural = NeuralVoices.forPlayer(s.playerNeuralVoice, s.playerBody)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GhostButton("Preview", Modifier.weight(1f), Icons.Rounded.VolumeUp) {
+                            app.speech.stop()
+                            scope.launch { app.speech.play(Utterance("player", line, if (s.language == Lang.HINDI) "hi-IN" else s.language.ttsTag, s.playerVoiceName, s.playerBody == BodyType.FEM, s.playerPitch, s.playerRate,
+                                Emotion.HAPPY, neuralVoice = myNeural, lang = NeuralVoices.langCode(s.language))) }
+                        }
+                        GhostButton(if (showNeural) "Hide" else myNeural, Modifier.weight(1f), Icons.Rounded.RecordVoiceOver) { showNeural = !showNeural }
                     }
-                    GhostButton(if (showNeural) "Hide" else myNeural, Modifier.weight(1f), Icons.Rounded.RecordVoiceOver) { showNeural = !showNeural }
-                }
-                if (showNeural) {
-                    NeuralVoices.ALL.sortedBy { if ((s.playerBody == BodyType.FEM) == it.feminine) 0 else 1 }.forEach { v ->
+                    if (showNeural) NeuralVoices.ALL.sortedBy { if ((s.playerBody == BodyType.FEM) == it.feminine) 0 else 1 }.forEach { v ->
                         VoiceRow("${v.name} · ${v.trait}${if (v.feminine) " · F" else " · M"}", myNeural == v.name) { upd { putString("playerNeuralVoice", v.name) } }
                     }
+                } else {
+                    val mine = com.kissa.app.voice.engines.EdgeTts.playerVoice(s.playerEdgeVoice, s.playerBody == BodyType.FEM)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GhostButton("Preview", Modifier.weight(1f), Icons.Rounded.VolumeUp) {
+                            app.speech.stop()
+                            scope.launch { app.speech.play(Utterance("player", line, if (s.language == Lang.HINDI) "hi-IN" else s.language.ttsTag, s.playerVoiceName, s.playerBody == BodyType.FEM, s.playerPitch, s.playerRate,
+                                Emotion.HAPPY, edgeVoice = mine, lang = NeuralVoices.langCode(s.language))) }
+                        }
+                        GhostButton(if (showNeural) "Hide" else mine.label.substringBefore(" ·"), Modifier.weight(1f), Icons.Rounded.RecordVoiceOver) { showNeural = !showNeural }
+                    }
+                    if (showNeural) com.kissa.app.voice.engines.EdgeTts.PLAYER_CHOICES.sortedBy { if ((s.playerBody == BodyType.FEM) == it.feminine) 0 else 1 }.forEach { v ->
+                        VoiceRow("${v.label}${if (v.feminine) " · F" else " · M"}", mine.id == v.id) { upd { putString("playerEdgeVoice", v.id) } }
+                    }
+                    Text("Your typed lines use a Microsoft neural voice so the Gemini voice quota is saved for the characters.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                 }
-                Text("Basic phone voice (fallback)", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
+                Text("Basic phone voice (last fallback)", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp))
                 Text("Pitch ${"%.2f".format(s.playerPitch)}", style = MaterialTheme.typography.labelMedium, color = pal.textDim)
                 Slider(s.playerPitch, { v -> upd { putFloat("playerPitch", v) } }, valueRange = 0.6f..1.6f)
                 Text("Speed ${"%.2f".format(s.playerRate)}", style = MaterialTheme.typography.labelMedium, color = pal.textDim)
@@ -110,7 +117,6 @@ fun SettingsScreen(nav: NavController) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GhostButton("Preview", Modifier.weight(1f), Icons.Rounded.VolumeUp) {
                         app.speech.stop()
-                        val line = when (s.language) { Lang.HINDI -> "नमस्ते, मैं ${s.playerName} हूँ।"; Lang.ENGLISH -> "Hey, I'm ${s.playerName}. Nice to meet you."; Lang.HINGLISH -> "Hey, main ${s.playerName} hoon. Kaise ho?" }
                         scope.launch { app.speech.play(Utterance("player", line, if (s.language == Lang.HINDI) "hi-IN" else s.language.ttsTag, s.playerVoiceName, s.playerBody == BodyType.FEM, s.playerPitch, s.playerRate)) }
                     }
                     GhostButton(if (showPlayerVoices) "Hide voices" else "Choose voice", Modifier.weight(1f), Icons.Rounded.RecordVoiceOver) { showPlayerVoices = !showPlayerVoices; app.speech.refreshVoices() }
@@ -168,7 +174,7 @@ fun SettingsScreen(nav: NavController) {
 
             // ------------------------------------------------ Privacy
             Group("Privacy & data", Icons.Rounded.Shield) {
-                Text("Everything — stories, conversations, memories and voice recordings — is stored only on this device. Lines are sent to Kissa's secure server (which uses Google Gemini) to generate replies and natural voices; speech recognition uses your phone's recogniser, with the server as a backup.",
+                Text("Everything — stories, conversations, memories and voice recordings — is stored only on this device. ${if (app.ai.backendMode) "Lines are sent to Kissa's server (which uses Google Gemini) to generate replies and natural voices." else "Story lines are sent directly to Google Gemini with your own API key (stored encrypted on this phone) to generate replies and character voices; when Gemini's voice quota runs out, lines are voiced by Microsoft's free Edge neural voice service."} Speech recognition uses your phone's recogniser, with Gemini as a backup.",
                     style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                 Spacer(Modifier.height(8.dp))
                 Text("Reports filed: $reports (stored locally; reported lines are hidden from the story).", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
@@ -184,7 +190,7 @@ fun SettingsScreen(nav: NavController) {
             }
 
             Group("About", Icons.Rounded.Info) {
-                Text("Kissa ${BuildConfig.VERSION_NAME} — interactive animated stories. Original characters and art. AI and natural voices by Google Gemini through Kissa's server; basic voice by your device's text-to-speech engine.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+                Text("Kissa ${BuildConfig.VERSION_NAME} — interactive animated stories. Original characters and art. Story AI and voices by Google Gemini (your key), backup natural voices by Microsoft Edge neural TTS, basic voice by your device's text-to-speech engine.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                 TextButton(onClick = { nav.navigate("onboarding") }) { Text("Show onboarding again") }
             }
         }
@@ -192,14 +198,14 @@ fun SettingsScreen(nav: NavController) {
 
     confirm?.let { what ->
         AlertDialog(onDismissRequest = { confirm = null },
-            title = { Text(when (what) { "key" -> "Remove developer key?"; "memories" -> "Clear conversations & memories?"; else -> "Erase everything?" }) },
-            text = { Text(when (what) { "key" -> "The app will use the Kissa backend again."; "memories" -> "All playthroughs, transcripts, checkpoints, memories and voice recordings will be deleted. Your own stories and settings stay."; else -> "Deletes all data including your created stories, favourites, and settings." }) },
+            title = { Text(when (what) { "key" -> "Remove API key?"; "memories" -> "Clear conversations & memories?"; else -> "Erase everything?" }) },
+            text = { Text(when (what) { "key" -> "Characters can't talk until you add a key again."; "memories" -> "All playthroughs, transcripts, checkpoints, memories and voice recordings will be deleted. Your own stories and settings stay."; else -> "Deletes all data including your created stories, favourites, and settings." }) },
             confirmButton = {
                 TextButton(onClick = {
                     val w = what; confirm = null
                     scope.launch {
                         when (w) {
-                            "key" -> app.settings.setDevApiKey(null)
+                            "key" -> { app.settings.setApiKey(null); app.ai.runSetup(force = true) }
                             "memories" -> app.repo.clearAllMemories()
                             else -> { app.repo.clearEverything(); app.settings.resetAll(); nav.navigate("onboarding") { popUpTo(nav.graph.id) { inclusive = true } } }
                         }
@@ -230,6 +236,35 @@ private fun Toggle(label: String, value: Boolean, hint: String? = null, onChange
             hint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = LocalPalette.current.textDim) }
         }
         Switch(value, onChange)
+    }
+}
+
+@Composable
+private fun VoiceEngines(engine: String, keySet: Boolean, mode: com.kissa.app.voice.VoiceMode, edgeOk: Boolean?, backend: Boolean, geminiFreeAt: Long?, onEngine: (String) -> Unit) {
+    val pal = LocalPalette.current
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.05f)).padding(12.dp)) {
+        Text("Voice engines", style = MaterialTheme.typography.labelLarge, color = pal.textDim)
+        val now = mode.engine?.label ?: "nothing played yet"
+        Text("Now speaking with: $now", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+        mode.reason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFC46B)) }
+        if (backend) {
+            Text("1. Gemini voices via the Kissa server  2. Microsoft neural  3. Phone voice", style = MaterialTheme.typography.bodySmall, color = pal.textDim, modifier = Modifier.padding(top = 4.dp))
+        } else {
+            val gem = when {
+                engine == "microsoft" -> "off (you chose Microsoft only)"
+                !keySet -> "needs your API key"
+                geminiFreeAt != null -> "free quota used up — back around ${java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date(geminiFreeAt))}"
+                else -> "ready for character lines (free tier ≈ 10 lines/day per model)"
+            }
+            Text("1. Gemini voice (your key): $gem", style = MaterialTheme.typography.bodySmall, color = pal.textDim, modifier = Modifier.padding(top = 4.dp))
+            Text("2. Microsoft neural (free, no key): " + when (edgeOk) { true -> "reachable"; false -> "not reachable right now"; null -> "checking…" },
+                style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+            Text("3. Phone voice — shown as \"Basic voice\"", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KChip("Best available", engine != "microsoft") { onEngine("auto") }
+                KChip("Microsoft only (consistent)", engine == "microsoft") { onEngine("microsoft") }
+            }
+        }
     }
 }
 

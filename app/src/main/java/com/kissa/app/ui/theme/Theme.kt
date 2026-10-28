@@ -71,6 +71,10 @@ fun KissaTheme(themeId: String, accent: Long, backdrop: String, content: @Compos
         labelSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 0.5.sp),
     )
     CompositionLocalProvider(LocalPalette provides palette, LocalAccent provides acc, LocalBackdrop provides backdrop) {
-        MaterialTheme(colorScheme = scheme, typography = typo, content = content)
+        // Text/Icon default to LocalContentColor, which is BLACK outside a Surface: provide the theme's light text colour
+        // so every screen is readable in every theme (fixes dark-on-dark titles and toggle labels).
+        MaterialTheme(colorScheme = scheme, typography = typo) {
+            CompositionLocalProvider(LocalContentColor provides palette.text, content = content)
+        }
     }
 }

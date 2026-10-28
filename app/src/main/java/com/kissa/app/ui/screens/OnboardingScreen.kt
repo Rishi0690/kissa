@@ -103,14 +103,21 @@ fun OnboardingScreen(onDone: () -> Unit) {
                         Text("You can change all of this later in Settings, and pick a language per story.", style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                     else -> {
-                        Text("Getting your stories ready", style = MaterialTheme.typography.headlineMedium)
+                        Text("Bring the characters to life", style = MaterialTheme.typography.headlineMedium)
                         Spacer(Modifier.height(10.dp))
-                        Text("Kissa sets up its story AI and natural voices for you in the background — there's nothing to configure.",
-                            style = MaterialTheme.typography.bodyLarge, color = pal.textDim)
-                        Spacer(Modifier.height(18.dp))
+                        if (app.ai.backendMode) {
+                            Text("Kissa sets up its story AI and natural voices for you in the background.", style = MaterialTheme.typography.bodyLarge, color = pal.textDim)
+                        } else {
+                            Text("Characters think and speak with Google Gemini. Paste your own free Gemini API key once — tap the link below to create one in a minute.",
+                                style = MaterialTheme.typography.bodyLarge, color = pal.textDim)
+                            Spacer(Modifier.height(16.dp))
+                            ApiKeyCard(compact = true)
+                        }
+                        Spacer(Modifier.height(14.dp))
                         SetupStatusCard(setup, onRetry = { app.ai.runSetup(force = true) })
                         Spacer(Modifier.height(12.dp))
-                        Text("Your conversations stay on this phone. Lines are sent to Kissa's secure server only to generate replies and voices.",
+                        Text(if (app.ai.backendMode) "Your conversations stay on this phone. Lines are sent to Kissa's server only to generate replies and voices."
+                            else "Your conversations stay on this phone. Lines go straight to Google Gemini with your key; backup voices use Microsoft's free neural voice service. You can add or change the key later in Settings.",
                             style = MaterialTheme.typography.bodySmall, color = pal.textDim)
                     }
                 }
@@ -124,7 +131,11 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 }
             }
             if (pager.currentPage < 2) AccentButton("Next") { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
-            else AccentButton(if (setup.phase == com.kissa.app.ai.SetupState.Phase.CHECKING) "Continue" else "Enter Kissa") { finish() }
+            else AccentButton(when {
+                setup.phase == com.kissa.app.ai.SetupState.Phase.NEEDS_KEY -> "Skip for now"
+                setup.phase == com.kissa.app.ai.SetupState.Phase.CHECKING -> "Continue"
+                else -> "Enter Kissa"
+            }) { finish() }
         }
     }
 }

@@ -200,7 +200,7 @@ fun SceneScreen(
             ui.error?.let { err ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xCC2A1520)).border(1.dp, Color(0x55FF7A90), RoundedCornerShape(18.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(err, style = MaterialTheme.typography.bodySmall, color = Color.White, modifier = Modifier.weight(1f))
-                    if (ui.errorNeedsKey || ui.errorIsSetup) TextButton(onClick = onOpenSettings) { Text("Status") }
+                    if (ui.errorNeedsKey || ui.errorIsSetup) TextButton(onClick = onOpenSettings) { Text(if (ui.errorNeedsKey) "Add key" else "Status") }
                     if (ui.canRetry) TextButton(onClick = { vm.retry() }) { Text("Retry") }
                     IconButton(onClick = { vm.dismissError() }, modifier = Modifier.size(32.dp)) { Icon(Icons.Rounded.Close, "Dismiss", tint = Color.White) }
                 }

@@ -47,25 +47,39 @@ data class Utterance(
     val rate: Float,
     val emotion: Emotion = Emotion.NEUTRAL,
     val audioFile: String? = null,
-    /** Gemini prebuilt voice for natural speech through the backend; null = phone TTS only. */
+    /** Gemini prebuilt voice (direct with the user's key, or via the backend); null = no Gemini voice for this line. */
     val neuralVoice: String? = null,
+    /** Microsoft neural voice (free secondary engine); null = none. */
+    val edgeVoice: com.kissa.app.voice.engines.EdgeVoice? = null,
+    /** Character lines may use the (tiny) Gemini TTS quota; the player's typed lines use the Microsoft voice. */
+    val useGemini: Boolean = false,
     val delivery: String? = null,
     val vocal: String? = null,
     val lang: String = "hinglish",
 )
 
+/** Voice engines, best first. PHONE = the device's own TTS ("Basic voice"). */
+enum class VoiceEngine(val label: String) { SERVER("Gemini voice (Kissa server)"), GEMINI("Gemini voice (your key)"), MICROSOFT("Microsoft neural voice"), PHONE("Basic phone voice") }
+
 /** Which voice engine is actually being heard. The UI shows "Basic voice" whenever premium isn't really active. */
-data class VoiceMode(val premium: Boolean, val reason: String? = null)
+data class VoiceMode(val premium: Boolean, val reason: String? = null, val engine: VoiceEngine? = null)
 
 /**
  * Single audio queue for the whole app. TTS lines and recorded voice clips are played strictly one at a
  * time (Mutex), so speech never overlaps; stop() cancels whatever is playing and releases the waiter.
  */
 class SpeechDirector(private val ctx: Context, private val backend: BackendClient? = null, private val ai: AiService? = null) {
-    private val _mode = MutableStateFlow(VoiceMode(premium = false, reason = "Checking natural voices…"))
+    private val _mode = MutableStateFlow(VoiceMode(premium = false, reason = null))
     val mode: StateFlow<VoiceMode> = _mode.asStateFlow()
     /** Set from settings: false = always use the phone voice. */
     @Volatile var naturalVoicesEnabled = true
+    /** Set from settings: false = never spend the Gemini TTS quota (Microsoft neural voices only). */
+    @Volatile var geminiVoicesEnabled = true
+    val geminiTts = com.kissa.app.voice.engines.GeminiTts()
+    val edgeTts = com.kissa.app.voice.engines.EdgeTts()
+    private val _edgeReachable = MutableStateFlow<Boolean?>(null)
+    /** null = not checked yet. */
+    val edgeReachable: StateFlow<Boolean?> = _edgeReachable.asStateFlow()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val inflight = ConcurrentHashMap<String, Deferred<File?>>()
     private val cacheDir: File by lazy { File(ctx.cacheDir, "tts").apply { mkdirs() } }
@@ -142,7 +156,7 @@ class SpeechDirector(private val ctx: Context, private val backend: BackendClien
         if (canUseNeural(u)) {
             // wait for the audio, but stay interruptible by stop() (tap-to-skip / new input)
             val d = ioScope.async { neuralFile(u) }
-            val deadline = System.currentTimeMillis() + 16_000
+            val deadline = System.currentTimeMillis() + 26_000
             var f: File? = null
             while (generation == myGen && System.currentTimeMillis() < deadline) {
                 if (d.isCompleted) { f = d.await(); break }
@@ -154,12 +168,12 @@ class SpeechDirector(private val ctx: Context, private val backend: BackendClien
                 if (ok || generation != myGen) return@withLock ok
             }
         }
-        if (u.neuralVoice != null && (_mode.value.premium || !canUseNeural(u))) {
+        if ((u.neuralVoice != null || u.edgeVoice != null) && (_mode.value.premium || !canUseNeural(u))) {
             _mode.value = VoiceMode(false, when {
                 !naturalVoicesEnabled -> "Phone voice (natural voices are off)"
-                backend?.configured != true -> "Natural voices not set up — basic phone voice"
+                _mode.value.engine == VoiceEngine.PHONE && _mode.value.reason != null -> _mode.value.reason
                 else -> "Natural voice unavailable — basic phone voice"
-            })
+            }, VoiceEngine.PHONE)
         }
         if (!_ready.value) {
             // wait up to 3s for the engine
@@ -201,48 +215,117 @@ class SpeechDirector(private val ctx: Context, private val backend: BackendClien
         ok
     }
 
-    // ------------------------------------------------------------------ natural (neural) voices via the backend
+    // ------------------------------------------------------------------ natural (neural) voices
+    // Order: Kissa server (only when a backend URL is built in) -> Gemini TTS with the user's key (character lines,
+    // while its free quota lasts) -> Microsoft neural (free, no key) -> phone TTS ("Basic voice").
 
-    private fun canUseNeural(u: Utterance): Boolean =
-        naturalVoicesEnabled && u.neuralVoice != null && backend?.configured == true
-
-    private fun cacheKey(u: Utterance): String {
-        val raw = listOf(u.neuralVoice, u.emotion.name, u.delivery.orEmpty(), u.vocal.orEmpty(), u.lang, u.text).joinToString("|")
-        val md = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return md.joinToString("") { "%02x".format(it) }
+    private fun engineChain(u: Utterance): List<VoiceEngine> = buildList {
+        if (!naturalVoicesEnabled) return@buildList
+        if (backend?.configured == true) { if (u.neuralVoice != null) add(VoiceEngine.SERVER) }
+        else if (u.useGemini && geminiVoicesEnabled && u.neuralVoice != null && ai?.userKey() != null && geminiTts.available()) add(VoiceEngine.GEMINI)
+        if (u.edgeVoice != null) add(VoiceEngine.MICROSOFT)
     }
 
-    /** Fetches (or reuses the cached) natural-voice WAV for a line. Null when the backend can't voice it right now. */
+    private fun canUseNeural(u: Utterance): Boolean = engineChain(u).isNotEmpty()
+
+    private fun lineKey(u: Utterance) = sha1(listOf(u.emotion.name, u.delivery.orEmpty(), u.vocal.orEmpty(), u.lang, u.text).joinToString("|"))
+    private fun voiceKey(u: Utterance, e: VoiceEngine) = when (e) {
+        VoiceEngine.MICROSOFT -> u.edgeVoice?.let { "${it.id}${it.pitchHz}${it.ratePct}" }.orEmpty()
+        else -> u.neuralVoice.orEmpty()
+    }
+    private fun sha1(raw: String) = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
+    private fun cacheFile(u: Utterance, e: VoiceEngine, ext: String) = File(cacheDir, "${e.name.lowercase()}_${sha1(voiceKey(u, e) + "|" + lineKey(u))}.$ext")
+
+    /** Already-generated audio for this line (any engine), so replays sound exactly like the first time. */
+    private fun cached(u: Utterance): Pair<File, VoiceEngine>? {
+        for (e in listOf(VoiceEngine.SERVER, VoiceEngine.GEMINI, VoiceEngine.MICROSOFT)) {
+            if (e == VoiceEngine.MICROSOFT && u.edgeVoice == null) continue
+            if (e != VoiceEngine.MICROSOFT && u.neuralVoice == null) continue
+            for (ext in listOf("wav", "mp3")) {
+                val f = cacheFile(u, e, ext)
+                if (f.exists() && f.length() > 64) { f.setLastModified(System.currentTimeMillis()); return f to e }
+            }
+        }
+        return null
+    }
+
+    /** Fetches (or reuses the cached) natural-voice audio for a line. Null when no natural engine can voice it right now. */
     suspend fun neuralFile(u: Utterance): File? {
-        val b = backend ?: return null
-        if (u.neuralVoice == null || !b.configured) return null
-        val key = cacheKey(u)
-        val f = File(cacheDir, "$key.wav")
-        if (f.exists() && f.length() > 64) { f.setLastModified(System.currentTimeMillis()); return f }
+        if (!naturalVoicesEnabled) return null
+        cached(u)?.let { (f, e) -> _mode.value = VoiceMode(true, null, e); return f }
+        val chain = engineChain(u)
+        if (chain.isEmpty()) return null
+        val key = (voiceKey(u, chain.first()) + lineKey(u))
         val job = inflight.getOrPut(key) {
             ioScope.async {
-                try {
-                    val bytes = b.tts(TtsRequest(u.text, u.neuralVoice, u.emotion.name, u.lang, u.delivery, u.vocal))
-                    val tmp = File(cacheDir, "$key.tmp"); tmp.writeBytes(bytes); tmp.renameTo(f)
-                    _mode.value = VoiceMode(premium = true)
-                    ai?.reportVoiceSuccess()
-                    trimCache()
-                    f
-                } catch (e: AiException) {
-                    _mode.value = VoiceMode(premium = false, reason = when (e.kind) {
-                        AiException.Kind.NETWORK, AiException.Kind.TIMEOUT -> "Offline — basic phone voice"
-                        AiException.Kind.QUOTA, AiException.Kind.SERVICE_LIMIT -> "Voice limit reached — basic phone voice"
-                        AiException.Kind.SERVICE_SETUP -> "Natural voices not set up — basic phone voice"
-                        else -> "Natural voice unavailable — basic phone voice"
-                    })
-                    ai?.reportVoiceFailure()
-                    null
-                } catch (e: Exception) {
-                    _mode.value = VoiceMode(false, "Natural voice unavailable — basic phone voice"); null
-                } finally { inflight.remove(key) }
+                try { synthChain(u, chain) } finally { inflight.remove(key) }
             }
         }
         return job.await()
+    }
+
+    private suspend fun synthChain(u: Utterance, chain: List<VoiceEngine>): File? {
+        var geminiNote: String? = null
+        var lastErr: String? = null
+        for (e in chain) {
+            try {
+                val f: File = when (e) {
+                    VoiceEngine.SERVER -> {
+                        val bytes = backend!!.tts(TtsRequest(u.text, u.neuralVoice!!, u.emotion.name, u.lang, u.delivery, u.vocal))
+                        writeAtomic(cacheFile(u, e, "wav"), bytes)
+                    }
+                    VoiceEngine.GEMINI -> {
+                        val key = ai?.userKey() ?: continue
+                        val bytes = geminiTts.synthesize(key, u.text, u.neuralVoice!!, u.emotion.name, u.lang, u.delivery, u.vocal)
+                        writeAtomic(cacheFile(u, e, "wav"), bytes)
+                    }
+                    VoiceEngine.MICROSOFT -> {
+                        val ssml = com.kissa.app.voice.engines.EdgeTts.ssml(u.edgeVoice!!, u.text, u.emotion, u.delivery, u.vocal)
+                        val mp3 = writeAtomic(cacheFile(u, e, "mp3"), edgeTts.synthesize(ssml))
+                        _edgeReachable.value = true
+                        val wav = cacheFile(u, e, "wav")
+                        if (com.kissa.app.voice.engines.Mp3Decoder.toWav(mp3, wav)) { mp3.delete(); wav } else mp3
+                    }
+                    VoiceEngine.PHONE -> continue
+                }
+                _mode.value = VoiceMode(premium = true, reason = if (e == VoiceEngine.MICROSOFT) geminiNote else null, engine = e)
+                ai?.reportVoiceSuccess()
+                trimCache()
+                return f
+            } catch (ce: CancellationException) { throw ce
+            } catch (ex: AiException) {
+                lastErr = when (ex.kind) {
+                    AiException.Kind.NETWORK, AiException.Kind.TIMEOUT -> "Offline — basic phone voice"
+                    AiException.Kind.QUOTA, AiException.Kind.SERVICE_LIMIT -> "Voice limit reached — basic phone voice"
+                    AiException.Kind.SERVICE_SETUP -> "Natural voices not set up — basic phone voice"
+                    else -> "Natural voice unavailable — basic phone voice"
+                }
+                if (e == VoiceEngine.GEMINI) geminiNote = when (ex.kind) {
+                    AiException.Kind.QUOTA -> "Gemini's free voice quota is used up for now — using the Microsoft neural voice"
+                    AiException.Kind.AUTH -> "Gemini key rejected for voice — using the Microsoft neural voice"
+                    else -> "Gemini voice unavailable — using the Microsoft neural voice"
+                }
+            } catch (ex: Exception) {
+                if (e == VoiceEngine.MICROSOFT) _edgeReachable.value = false
+                lastErr = if (e == VoiceEngine.MICROSOFT) "Microsoft voice unreachable (offline?) — basic phone voice" else "Natural voice unavailable — basic phone voice"
+            }
+        }
+        _mode.value = VoiceMode(premium = false, reason = lastErr ?: "Natural voice unavailable — basic phone voice", engine = VoiceEngine.PHONE)
+        ai?.reportVoiceFailure()
+        return null
+    }
+
+    private fun writeAtomic(f: File, bytes: ByteArray): File {
+        val tmp = File(cacheDir, f.name + ".tmp"); tmp.writeBytes(bytes); tmp.renameTo(f); return f
+    }
+
+    /** Quick reachability check of the free Microsoft voice (shown honestly in Settings). */
+    fun checkMicrosoftVoice() {
+        ioScope.launch {
+            _edgeReachable.value = runCatching {
+                edgeTts.synthesize(com.kissa.app.voice.engines.EdgeTts.ssml(com.kissa.app.voice.engines.EdgeTts.PLAYER_CHOICES.first(), "Hi"), 12_000).size > 200
+            }.getOrDefault(false)
+        }
     }
 
     /** Starts generating a line's audio early (e.g. while the player's own line is still playing). */
@@ -252,7 +335,7 @@ class SpeechDirector(private val ctx: Context, private val backend: BackendClien
     }
 
     private fun trimCache() {
-        val files = cacheDir.listFiles()?.filter { it.name.endsWith(".wav") } ?: return
+        val files = cacheDir.listFiles()?.filter { it.name.endsWith(".wav") || it.name.endsWith(".mp3") } ?: return
         var total = files.sumOf { it.length() }
         if (total < 60L * 1024 * 1024) return
         for (f in files.sortedBy { it.lastModified() }) { total -= f.length(); f.delete(); if (total < 40L * 1024 * 1024) break }
@@ -278,7 +361,7 @@ class SpeechDirector(private val ctx: Context, private val backend: BackendClien
                 player = mp; playerWaiter = done
                 val dur = mp.duration.coerceAtLeast(1)
                 _speaking.value = SpeakingState(u.speakerId, u.text, highlightEnd = if (isRecording) u.text.length else 0, envelope = env,
-                    isRecording = isRecording, hasWordEvents = !isRecording)
+                    isRecording = isRecording, hasWordEvents = !isRecording && env != null)
                 mp.start()
                 if (!isRecording) { ticker = ioScope.launch {
                     // karaoke-style subtitle progress from the real playback position

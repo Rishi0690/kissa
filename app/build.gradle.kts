@@ -15,12 +15,12 @@ android {
         applicationId = "com.kissa.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "2.1.0"
         vectorDrawables { useSupportLibrary = true }
-        // Base URL of the Kissa backend (Cloudflare Worker). Set with -PkissaBackendUrl=https://... or in
-        // ~/.gradle/gradle.properties. The placeholder makes the app show "AI service abhi setup nahi hai".
-        val backendUrl = (project.findProperty("kissaBackendUrl") as String?) ?: "https://kissa-backend.REPLACE-ME.workers.dev"
+        // OPTIONAL Kissa backend (Cloudflare Worker). Default (empty) = direct-key mode: the user pastes their own Gemini key.
+        // Set -PkissaBackendUrl=https://... to build a backend-mode APK where the server holds the key instead.
+        val backendUrl = (project.findProperty("kissaBackendUrl") as String?) ?: ""
         buildConfigField("String", "KISSA_BACKEND_URL", "\"" + backendUrl + "\"")
     }
 
@@ -58,7 +58,12 @@ android {
     composeOptions { kotlinCompilerExtensionVersion = "1.5.10" }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
     lint { checkReleaseBuilds = false; abortOnError = false }
-    testOptions { unitTests.isReturnDefaultValues = true; unitTests.all { it.systemProperty("shots", System.getProperty("shots") ?: "false") } }
+    testOptions { unitTests.isReturnDefaultValues = true; unitTests.all {
+        it.systemProperty("shots", System.getProperty("shots") ?: "false")
+        it.systemProperty("live", System.getProperty("live") ?: "false")
+        System.getProperty("testProxyPort")?.let { p -> it.systemProperty("testProxyPort", p) }
+        System.getProperty("voiceOut")?.let { p -> it.systemProperty("voiceOut", p) }
+    } }
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }

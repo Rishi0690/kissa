@@ -4,7 +4,7 @@ import com.kissa.app.model.BodyType
 import com.kissa.app.model.CharacterSpec
 import com.kissa.app.model.Lang
 
-/** Gemini prebuilt voices offered through the Kissa backend (names per ai.google.dev speech-generation docs). */
+/** Gemini prebuilt voices (names per ai.google.dev speech-generation docs), used directly with the user's key or via the backend. */
 data class NeuralVoice(val name: String, val trait: String, val feminine: Boolean)
 
 object NeuralVoices {
@@ -30,6 +30,11 @@ object NeuralVoices {
 
     fun forCharacter(c: CharacterSpec, override: String?): String =
         override?.takeIf { isValid(it) } ?: c.voice.neuralVoice?.takeIf { isValid(it) } ?: if (c.voice.feminine) "Leda" else "Achird"
+
+    /** Fixed Microsoft neural voice for a character (secondary engine), distinct from the player's own voice. */
+    fun edgeForCharacter(c: CharacterSpec, override: String?, playerEdge: String?, playerBody: BodyType) =
+        com.kissa.app.voice.engines.EdgeTts.characterVoice(forCharacter(c, override), c.voice.feminine,
+            com.kissa.app.voice.engines.EdgeTts.playerVoice(playerEdge, playerBody == BodyType.FEM).id)
 
     fun langCode(l: Lang) = when (l) { Lang.HINGLISH -> "hinglish"; Lang.ENGLISH -> "english"; Lang.HINDI -> "hindi" }
 }

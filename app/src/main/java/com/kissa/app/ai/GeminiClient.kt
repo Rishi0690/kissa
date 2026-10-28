@@ -18,10 +18,9 @@ class AiException(message: String, val kind: Kind, val retryable: Boolean) : Exc
 }
 
 /**
- * Builds Gemini generateContent bodies (sent to the Kissa backend by [BackendClient.chat]) and parses responses.
- * Direct calls with a key are ONLY used by the hidden developer override in debug builds; release builds never
- * hold a provider key. Talks to Gemini generateContent over REST. If a proxy URL is configured, the same request body is
- * POSTed to `<proxy>/generate?model=<model>` and the key is NOT sent from the device (the proxy holds it).
+ * Gemini generateContent over REST. Default (direct-key) mode: called straight from the app with the user's own API key
+ * (stored in EncryptedSharedPreferences). Optional backend mode: the same body is sent to the Kissa backend by
+ * [BackendClient.chat], which holds the key instead.
  */
 class GeminiClient(private val http: OkHttpClient = defaultHttp()) {
 
@@ -38,6 +37,51 @@ class GeminiClient(private val http: OkHttpClient = defaultHttp()) {
     }
 
     private val JSON = "application/json; charset=utf-8".toMediaType()
+    @Volatile private var preferredModel: String? = null
+
+    /** Direct-key generation with automatic model fallback (missing model / per-model free quota exhausted). */
+    suspend fun generateDirect(apiKey: String, payload: PromptPayload, schema: JsonObject?, temperature: Double = 0.9, maxTokens: Int = 2048): String {
+        val order = (listOfNotNull(preferredModel) + MODELS).distinct()
+        var last: AiException? = null
+        for (model in order) {
+            try {
+                val text = generate(apiKey, null, model, payload, schema, temperature, maxTokens, attempts = 2)
+                preferredModel = model
+                return text
+            } catch (e: AiException) {
+                last = e
+                if (e.kind != AiException.Kind.MODEL_NOT_FOUND && e.kind != AiException.Kind.QUOTA) throw e
+            }
+        }
+        throw last ?: AiException("No Gemini model answered", AiException.Kind.SERVER, true)
+    }
+
+    /** "Test connection": a tiny real request with the key. Returns the model that answered. */
+    suspend fun ping(apiKey: String): String {
+        generateDirect(apiKey, PromptPayload("Reply with the single word OK.", listOf(PromptContent("user", "ping"))), null, 0.0, 16)
+        return preferredModel ?: DEFAULT_MODEL
+    }
+
+    /** Speech-to-text backup with the user's key (used when the phone has no recogniser or it failed). */
+    suspend fun transcribe(apiKey: String, wav: ByteArray, lang: String): String = withContext(Dispatchers.IO) {
+        val instruction = if (lang == "hindi") "Transcribe this speech exactly, in Devanagari. Output only the transcript."
+            else "Transcribe this speech exactly. If it is Hindi or Hinglish, write it in Roman (Latin) script as young Indians type. Output only the transcript, nothing else."
+        val body = buildJsonObject {
+            putJsonArray("contents") { addJsonObject { put("role", "user"); putJsonArray("parts") {
+                addJsonObject { put("text", instruction) }
+                addJsonObject { putJsonObject("inlineData") { put("mimeType", "audio/wav"); put("data", java.util.Base64.getEncoder().encodeToString(wav)) } }
+            } } }
+            putJsonObject("generationConfig") { put("temperature", 0.0); put("maxOutputTokens", 512) }
+        }
+        var last: AiException? = null
+        for (model in (listOfNotNull(preferredModel) + MODELS).distinct()) {
+            try { return@withContext once(apiKey, null, model, body).trim() } catch (e: AiException) {
+                last = e
+                if (e.kind != AiException.Kind.MODEL_NOT_FOUND && e.kind != AiException.Kind.QUOTA) throw e
+            }
+        }
+        throw last ?: AiException("No transcription", AiException.Kind.SERVER, true)
+    }
 
     fun buildBody(payload: PromptPayload, schema: JsonObject?, temperature: Double, maxTokens: Int): JsonObject = buildJsonObject {
         putJsonObject("systemInstruction") { putJsonArray("parts") { addJsonObject { put("text", payload.system) } } }
