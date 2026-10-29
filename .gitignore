@@ -12,3 +12,4 @@ keystore.properties
 captures/
 testshim/out/
 tools/voicegen/.cache/
+__pycache__/

@@ -1,41 +1,249 @@
 {
-  "_doc": "Logical voice slot -> provider voice. Games store only the slot (spec §3). Switch provider by changing active_provider and re-running voicegen; game files do not change. Edge = Microsoft Edge read-aloud neural voices (free, no key). Sarvam = Bulbul (paid; shim kept, unused).",
-  "active_provider": "edge",
+  "_doc": "Logical voice slot -> provider voice. Games store only the slot (spec §3). active_provider=parler: AI4Bharat Indic Parler-TTS (free, open weights, run offline by voicegen; user-approved 2026-10-29). Edge kept as an alternative; Sarvam shim dormant (paid). Game-level 'narrator_voice' picks the narrator slot per game.",
+  "active_provider": "parler",
   "fallback_provider": null,
   "slots": {
     "female_young_hindi_1": {
-      "edge": { "voice": "hi-IN-SwaraNeural", "pitch_hz": 0, "rate_pct": 0 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "simran", "speaker_v4": null }
+      "edge": {
+        "voice": "hi-IN-SwaraNeural",
+        "pitch_hz": 0,
+        "rate_pct": 0
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "simran",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Divya",
+        "pitch": 1.0,
+        "speed": 1.0
+      }
     },
     "female_young_hindi_2": {
-      "edge": { "voice": "en-US-EmmaMultilingualNeural", "lang": "hi-IN", "pitch_hz": 4, "rate_pct": -6 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "ishita", "speaker_v4": null }
+      "edge": {
+        "voice": "en-US-EmmaMultilingualNeural",
+        "lang": "hi-IN",
+        "pitch_hz": 4,
+        "rate_pct": -6
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "ishita",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Rani",
+        "pitch": 1.0,
+        "speed": 0.97
+      }
     },
     "female_young_hindi_3": {
-      "edge": { "voice": "hi-IN-SwaraNeural", "pitch_hz": 14, "rate_pct": 6 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "kavya", "speaker_v4": null }
+      "edge": {
+        "voice": "hi-IN-SwaraNeural",
+        "pitch_hz": 14,
+        "rate_pct": 6
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "kavya",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Divya",
+        "pitch": 1.06,
+        "speed": 1.04
+      }
     },
     "male_young_hindi_1": {
-      "edge": { "voice": "hi-IN-MadhurNeural", "pitch_hz": 0, "rate_pct": 4 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "aditya", "speaker_v4": null }
+      "edge": {
+        "voice": "hi-IN-MadhurNeural",
+        "pitch_hz": 0,
+        "rate_pct": 4
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "aditya",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Rohit",
+        "pitch": 1.0,
+        "speed": 1.0
+      }
     },
     "male_young_hindi_2": {
-      "edge": { "voice": "hi-IN-MadhurNeural", "pitch_hz": 8, "rate_pct": 2 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "rohan", "speaker_v4": null }
+      "edge": {
+        "voice": "hi-IN-MadhurNeural",
+        "pitch_hz": 8,
+        "rate_pct": 2
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "rohan",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Rohit",
+        "pitch": 0.97,
+        "speed": 0.98
+      }
     },
     "male_mature_hindi_1": {
-      "edge": { "voice": "hi-IN-MadhurNeural", "pitch_hz": -18, "rate_pct": -10 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "ratan", "speaker_v4": null }
+      "edge": {
+        "voice": "hi-IN-MadhurNeural",
+        "pitch_hz": -18,
+        "rate_pct": -10
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "ratan",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Aman",
+        "pitch": 0.92,
+        "speed": 0.95
+      }
     },
     "narrator_hindi": {
-      "edge": { "voice": "en-US-AndrewMultilingualNeural", "lang": "hi-IN", "pitch_hz": -2, "rate_pct": -8 },
-      "sarvam": { "model": "bulbul:v4-flash", "fallback_model": "bulbul:v3", "speaker_v3": "anand", "speaker_v4": null }
+      "edge": {
+        "voice": "en-US-AndrewMultilingualNeural",
+        "lang": "hi-IN",
+        "pitch_hz": -2,
+        "rate_pct": -8
+      },
+      "sarvam": {
+        "model": "bulbul:v4-flash",
+        "fallback_model": "bulbul:v3",
+        "speaker_v3": "anand",
+        "speaker_v4": null
+      },
+      "parler": {
+        "speaker": "Aman",
+        "pitch": 1.0,
+        "speed": 0.95
+      }
+    },
+    "narrator_female_hindi": {
+      "parler": {
+        "speaker": "Rani",
+        "pitch": 1.0,
+        "speed": 0.95
+      },
+      "edge": {
+        "voice": "hi-IN-SwaraNeural",
+        "pitch_hz": -6,
+        "rate_pct": -8
+      }
     }
   },
   "emotion_prosody": {
-    "neutral": [0, 0, 0], "smile": [4, 2, 0], "happy": [8, 6, 5], "laugh": [10, 8, 5], "angry": [-2, 10, 20],
-    "furious": [-4, 14, 25], "sad": [-8, -12, -10], "crying": [-4, -14, -10], "shocked": [14, 10, 10], "surprised": [12, 6, 5],
-    "shy": [6, -8, -15], "blushing": [6, -6, -10], "smug": [-4, -6, 0], "worried": [4, -4, -5], "scared": [10, 10, -5],
-    "disgusted": [-6, -4, 0], "bored": [-6, -12, -10], "thinking": [-2, -8, -5], "sleepy": [-8, -18, -15], "determined": [-2, 2, 10]
+    "neutral": [
+      0,
+      0,
+      0
+    ],
+    "smile": [
+      4,
+      2,
+      0
+    ],
+    "happy": [
+      8,
+      6,
+      5
+    ],
+    "laugh": [
+      10,
+      8,
+      5
+    ],
+    "angry": [
+      -2,
+      10,
+      20
+    ],
+    "furious": [
+      -4,
+      14,
+      25
+    ],
+    "sad": [
+      -8,
+      -12,
+      -10
+    ],
+    "crying": [
+      -4,
+      -14,
+      -10
+    ],
+    "shocked": [
+      14,
+      10,
+      10
+    ],
+    "surprised": [
+      12,
+      6,
+      5
+    ],
+    "shy": [
+      6,
+      -8,
+      -15
+    ],
+    "blushing": [
+      6,
+      -6,
+      -10
+    ],
+    "smug": [
+      -4,
+      -6,
+      0
+    ],
+    "worried": [
+      4,
+      -4,
+      -5
+    ],
+    "scared": [
+      10,
+      10,
+      -5
+    ],
+    "disgusted": [
+      -6,
+      -4,
+      0
+    ],
+    "bored": [
+      -6,
+      -12,
+      -10
+    ],
+    "thinking": [
+      -2,
+      -8,
+      -5
+    ],
+    "sleepy": [
+      -8,
+      -18,
+      -15
+    ],
+    "determined": [
+      -2,
+      2,
+      10
+    ]
   }
 }

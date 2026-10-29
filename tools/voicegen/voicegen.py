@@ -22,7 +22,7 @@ Providers: "edge" (Microsoft Edge read-aloud neural voices; free, no key) is act
 v4-flash / v3 via POST https://api.sarvam.ai/text-to-speech, header api-subscription-key, base64 WAV in
 `audios[0]`) is implemented as a shim but unused while the product is free-only.
 """
-import argparse, asyncio, base64, hashlib, json, os, re, shutil, subprocess, sys, tempfile, wave, struct
+import argparse, asyncio, time, base64, hashlib, json, os, re, shutil, subprocess, sys, tempfile, wave, struct
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FPS = 25
@@ -153,91 +153,160 @@ def speakable(text):
     return t.strip()
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("games", nargs="+")
-    ap.add_argument("--proxy", default=os.environ.get("VOICEGEN_PROXY"))
-    ap.add_argument("--cache", default=os.path.join(HERE, ".cache"))
-    ap.add_argument("--bitrate", default="32k")
-    ap.add_argument("--dry-run", action="store_true")
-    a = ap.parse_args()
-    vm = load_map()
-    provider = vm["active_provider"]
-    os.makedirs(a.cache, exist_ok=True)
-    total_chars = 0; total_lines = 0; synthesized = 0; skipped_dynamic = 0; total_bytes = 0; total_secs = 0.0
-    report = []
-    for gpath in a.games:
-        gdir = os.path.dirname(os.path.abspath(gpath))
-        game = json.load(open(gpath, encoding="utf-8"))
-        chars = {c["id"]: c for c in game.get("characters", [])}
-        os.makedirs(os.path.join(gdir, "audio"), exist_ok=True)
-        env_path = os.path.join(gdir, "voice_env.json")
-        envs = {}
-        used = set()
-        g_chars = 0
-        for step, speaker in iter_lines(game):
-            text = line_text(step)
-            if "{player}" in text or "{name}" in text:
-                step.pop("voice_file", None); skipped_dynamic += 1; continue
-            spoken = speakable(text)
-            if not spoken:
-                continue
-            if speaker is None:
-                slot, vp = "narrator_hindi", {"pitch": 1.0, "speed": 1.0}
-            else:
-                ch = chars.get(speaker)
-                if ch is None:
-                    print(f"  ! unknown speaker {speaker}", file=sys.stderr); continue
-                vp = ch.get("voice", {}); slot = vp.get("slot")
-            scfg = vm["slots"].get(slot)
-            if scfg is None:
-                print(f"  ! slot {slot} not in voice_map", file=sys.stderr); continue
-            emo = step.get("emotion", "neutral") if speaker else "neutral"
+def line_jobs(game, vm, provider, bitrate):
+    """Yields (step, speaker, spoken, slot, emotion, key, extra) for every voiced line of a game."""
+    chars = {c["id"]: c for c in game.get("characters", [])}
+    narrator_slot = game.get("narrator_voice") or "narrator_hindi"
+    for step, speaker in iter_lines(game):
+        text = line_text(step)
+        if "{player}" in text or "{name}" in text:
+            yield step, speaker, None, None, None, None, None
+            continue
+        spoken = speakable(text)
+        if not spoken:
+            continue
+        if speaker is None:
+            slot, vp = narrator_slot, {"pitch": 1.0, "speed": 1.0}
+        else:
+            ch = chars.get(speaker)
+            if ch is None:
+                print(f"  ! unknown speaker {speaker}", file=sys.stderr); continue
+            vp = ch.get("voice", {}); slot = vp.get("slot")
+        scfg = vm["slots"].get(slot)
+        if scfg is None or provider not in scfg:
+            print(f"  ! slot {slot} has no {provider} voice in voice_map", file=sys.stderr); continue
+        pcfg = scfg[provider]
+        emo = (step.get("emotion") or "neutral") if speaker else "narration"
+        if provider == "parler":
+            from parler_engine import describe
+            pitch = float(vp.get("pitch", 1.0)) * float(pcfg.get("pitch", 1.0))
+            speed = float(vp.get("speed", 1.0)) * float(pcfg.get("speed", 1.0))
+            desc = describe(pcfg["speaker"], emo, pitch, speed, pcfg.get("extra", ""))
+            key_src = json.dumps(["parler", pcfg["speaker"], desc, spoken, bitrate], ensure_ascii=False, sort_keys=True)
+            extra = {"desc": desc}
+        else:
             ep, er, ev = vm["emotion_prosody"].get(emo, [0, 0, 0])
-            pcfg = scfg[provider]
             base_hz = 200 if "female" in slot else 120
             pitch_hz = pcfg.get("pitch_hz", 0) + (float(vp.get("pitch", 1.0)) - 1.0) * base_hz + ep
             rate_pct = pcfg.get("rate_pct", 0) + (float(vp.get("speed", 1.0)) - 1.0) * 100 + er
-            vol_pct = ev
-            key_src = json.dumps([provider, pcfg, spoken, round(pitch_hz, 1), round(rate_pct, 1), vol_pct, a.bitrate], ensure_ascii=False, sort_keys=True)
-            h = hashlib.sha1(key_src.encode()).hexdigest()[:12]
+            key_src = json.dumps([provider, pcfg, spoken, round(pitch_hz, 1), round(rate_pct, 1), ev, bitrate], ensure_ascii=False, sort_keys=True)
+            extra = {"pitch_hz": pitch_hz, "rate_pct": rate_pct, "vol_pct": ev, "pcfg": pcfg}
+        h = hashlib.sha1(key_src.encode()).hexdigest()[:12]
+        yield step, speaker, spoken, slot, emo, h, extra
+
+
+def plausible(secs, text):
+    n = len(text)
+    return 0.35 + n * 0.035 <= secs <= 2.5 + n * 0.16
+
+
+def trim_to_opus(src_wav, dst, bitrate):
+    """Trim leading/trailing silence, normalise loudness a little, encode Ogg/Opus mono 24 kHz."""
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src_wav, "-af",
+                    "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,"
+                    "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.12,areverse,"
+                    "loudnorm=I=-18:TP=-2:LRA=11,apad=pad_dur=0.08",
+                    "-ac", "1", "-ar", "24000", "-c:a", "libopus", "-b:a", bitrate, "-application", "audio", dst], check=True)
+
+
+def synth_all(games, vm, provider, cache, bitrate, limit=None):
+    jobs = []
+    seen = set()
+    for gpath in games:
+        game = json.load(open(gpath, encoding="utf-8"))
+        for step, speaker, spoken, slot, emo, h, extra in line_jobs(game, vm, provider, bitrate):
+            if h is None or h in seen or os.path.exists(os.path.join(cache, h + ".ogg")):
+                continue
+            seen.add(h)
+            jobs.append((game["id"], speaker, spoken, slot, emo, h, extra))
+    print(f"synth: {len(jobs)} lines to generate with {provider}", flush=True)
+    if limit:
+        jobs = jobs[:limit]
+    if not jobs:
+        return 0
+    eng = None
+    if provider == "parler":
+        from parler_engine import Parler
+        t0 = time.time(); eng = Parler(); print(f"parler loaded in {time.time() - t0:.0f}s", flush=True)
+    done = 0
+    for gid, speaker, spoken, slot, emo, h, extra in jobs:
+        t0 = time.time()
+        with tempfile.TemporaryDirectory() as td:
+            if provider == "parler":
+                raw = os.path.join(td, "raw.wav")
+                secs = 0
+                for attempt in range(3):
+                    secs = eng.synth(spoken, extra["desc"], raw, seed=int(h[:6], 16) + attempt * 7919)
+                    if plausible(secs, spoken):
+                        break
+                    print(f"  ~ retry {h} ({secs:.1f}s for {len(spoken)} chars)", flush=True)
+                trim_to_opus(raw, os.path.join(cache, h + ".ogg"), bitrate)
+            elif provider == "edge":
+                raw = os.path.join(td, "raw.mp3")
+                asyncio.run(synth_edge(spoken, extra["pcfg"]["voice"], extra["pitch_hz"], extra["rate_pct"], extra["vol_pct"], None, raw))
+                to_opus(raw, os.path.join(cache, h + ".ogg"), bitrate)
+            else:
+                raw = os.path.join(td, "raw.wav")
+                synth_sarvam(spoken, extra["pcfg"], 1.0 + extra["rate_pct"] / 100.0, raw)
+                to_opus(raw, os.path.join(cache, h + ".ogg"), bitrate)
+        done += 1
+        print(f"  + [{done}/{len(jobs)}] {gid}/{speaker or 'narrator'} {h} {emo} {time.time() - t0:.0f}s  {spoken[:40]}", flush=True)
+    return done
+
+
+def apply_all(games, vm, provider, cache, bitrate):
+    total_lines = 0; total_bytes = 0; total_secs = 0.0; missing = 0; dynamic = 0; report = []
+    for gpath in games:
+        gdir = os.path.dirname(os.path.abspath(gpath))
+        game = json.load(open(gpath, encoding="utf-8"))
+        os.makedirs(os.path.join(gdir, "audio"), exist_ok=True)
+        envs = {}; used = set()
+        for step, speaker, spoken, slot, emo, h, extra in line_jobs(game, vm, provider, bitrate):
+            if h is None:
+                step.pop("voice_file", None); dynamic += 1; continue
+            cached = os.path.join(cache, h + ".ogg")
+            total_lines += 1
+            if not os.path.exists(cached):
+                step.pop("voice_file", None); missing += 1; continue
             fname = f"audio/{speaker or 'narrator'}_{h}.ogg"
             dst = os.path.join(gdir, fname)
-            cached = os.path.join(a.cache, h + ".ogg")
-            total_lines += 1; total_chars += len(spoken); g_chars += len(spoken)
-            if not os.path.exists(cached):
-                if a.dry_run:
-                    continue
-                with tempfile.TemporaryDirectory() as td:
-                    raw = os.path.join(td, "raw.mp3" if provider == "edge" else "raw.wav")
-                    if provider == "edge":
-                        asyncio.run(synth_edge(spoken, pcfg["voice"], pitch_hz, rate_pct, vol_pct, a.proxy, raw))
-                    else:
-                        synth_sarvam(spoken, pcfg, 1.0 + rate_pct / 100.0, raw)
-                    to_opus(raw, cached, a.bitrate)
-                synthesized += 1
-                print(f"  + {fname}  [{slot}/{emo}] {spoken[:50]}", flush=True)
             if not os.path.exists(dst):
                 shutil.copyfile(cached, dst)
             step["voice_file"] = fname
-            used.add(fname)
-            env, secs = envelope(dst)
-            envs[fname] = {"fps": FPS, "secs": round(secs, 3), "env": env}
-            total_bytes += os.path.getsize(dst); total_secs += secs
-        if a.dry_run:
-            continue
-        # drop stale audio no longer referenced
+            if fname not in used:
+                used.add(fname)
+                env, secs = envelope(dst)
+                envs[fname] = {"fps": FPS, "secs": round(secs, 3), "env": env}
+                total_bytes += os.path.getsize(dst); total_secs += secs
         for f in os.listdir(os.path.join(gdir, "audio")):
             if f"audio/{f}" not in used:
                 os.remove(os.path.join(gdir, "audio", f))
-        json.dump(envs, open(env_path, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+        json.dump(envs, open(os.path.join(gdir, "voice_env.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
         with open(gpath, "w", encoding="utf-8") as f:
-            json.dump(game, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-        report.append(f"{game['id']}: {len(used)} files, {g_chars} chars")
+            json.dump(game, f, ensure_ascii=False, indent=2); f.write("\n")
+        report.append(f"{game['id']}: {len(used)} files")
     print("\n".join(report))
-    print(f"TOTAL lines={total_lines} chars={total_chars} synthesized_now={synthesized} skipped_player_name_lines={skipped_dynamic} "
-          f"audio_bytes={total_bytes} audio_secs={total_secs:.1f} provider={provider}")
+    print(f"TOTAL lines={total_lines} missing_audio={missing} player_name_lines={dynamic} audio_bytes={total_bytes} audio_secs={total_secs:.1f} provider={provider}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("games", nargs="+")
+    ap.add_argument("--cache", default=os.path.join(HERE, ".cache"))
+    ap.add_argument("--bitrate", default="40k")
+    ap.add_argument("--provider", default=None)
+    ap.add_argument("--synth-only", action="store_true", help="generate missing audio into the cache, do not touch games")
+    ap.add_argument("--apply-only", action="store_true", help="no synthesis: link cached audio into the game packs")
+    ap.add_argument("--limit", type=int, default=None)
+    a = ap.parse_args()
+    vm = load_map()
+    provider = a.provider or vm["active_provider"]
+    os.makedirs(a.cache, exist_ok=True)
+    sys.path.insert(0, HERE)
+    if not a.apply_only:
+        synth_all(a.games, vm, provider, a.cache, a.bitrate, a.limit)
+    if not a.synth_only:
+        apply_all(a.games, vm, provider, a.cache, a.bitrate)
 
 
 if __name__ == "__main__":
