@@ -1,0 +1,234 @@
+{
+  "id": "pehla-hafta",
+  "title": "Pehla Hafta",
+  "tagline": "Naya internship. Sakht boss. Kal subah 10 baje pitch.",
+  "premise": "Bengaluru ke ek startup mein tumhara pehla hafta. Team lead Vikram Rathore kisi ko maafi nahi deta, aur saath wali intern Zoya Khan dost hai ya rival — pata nahi. Ek raat, ek deck, ek pitch. Credit kiska hoga, faisla tumhara.",
+  "genre": "Office Drama",
+  "tags": ["office", "career", "friendship", "hinglish"],
+  "minutes": 7,
+  "creator": "Kissa Studio",
+  "cover": "cover.webp",
+  "accent": "#3FA7F5",
+  "language": "hi",
+  "player": { "role": "new_intern", "role_text": "Naya intern jise pehle hi din sabse mushkil kaam mila", "rig": "player_choice", "name": "player_entered", "default_name": "Kabir", "goal": "Pehla hafta survive karke full-time offer pao" },
+  "stats": {
+    "impression": { "start": 0, "min": -10, "max": 20, "label": "Vikram Impression", "icon": "work" },
+    "team": { "start": 0, "min": -10, "max": 20, "label": "Zoya Team", "icon": "group" },
+    "himmat": { "start": 3, "min": 0, "max": 20, "label": "Himmat", "icon": "bolt" }
+  },
+  "flags": { "used_zoya_slides": false, "took_credit": false, "shared_credit": false, "cofounder": false },
+  "rank": { "score": 0, "levels": [ { "name": "Intern", "at": 0 }, { "name": "Rising", "at": 20 }, { "name": "Star Performer", "at": 42 } ] },
+  "characters": [
+    { "id": "vikram", "name": "Vikram Sir", "name_hi": "विक्रम", "rig": "male", "bio": "Team lead. Kam bolta hai, sab notice karta hai.",
+      "look": { "skin": 2, "hair": "side_part", "hair_color": "black", "face": "sharp", "eyes": "dark", "outfit": "formal_shirt", "outfit_color": "grey", "accessories": ["beard", "watch"] },
+      "voice": { "slot": "male_mature_hindi_1", "pitch": 0.9, "speed": 0.95 } },
+    { "id": "zoya", "name": "Zoya", "name_hi": "ज़ोया", "rig": "female", "bio": "Doosri intern. Tez dimaag, tez zubaan, bade sapne.",
+      "look": { "skin": 1, "hair": "bob", "hair_color": "auburn", "face": "soft", "eyes": "hazel", "outfit": "denim_jacket", "outfit_color": "blue", "accessories": ["glasses_square"] },
+      "voice": { "slot": "female_young_hindi_3", "pitch": 1.0, "speed": 1.05 } }
+  ],
+  "objectives": [
+    { "id": "o1", "text": "Client deck kal subah tak ready karo", "given_by": "vikram", "place": "Office", "deadline": "Kal subah 10 baje", "accept_choice": true, "on_complete": { "rank": 8, "impression": 1 }, "on_fail": { "impression": -2 } },
+    { "id": "o2", "text": "Pitch meeting mein Vikram Sir ko impress karo", "given_by": "vikram", "place": "Meeting room", "deadline": "Kal 10 AM", "on_complete": { "rank": 10 } }
+  ],
+  "start": "w1",
+  "scenes": {
+    "w1": {
+      "title": "Pehla Din", "checkpoint": "Office ka pehla din", "background": "office", "time": "day", "music": "upbeat",
+      "cast": [ { "id": "vikram", "at": 0.62 }, { "id": "zoya", "at": 0.88 } ], "audience": 3,
+      "steps": [
+        { "narrate": "सोमवार, सुबह साढ़े नौ बजे। नया ऑफ़िस, नया लैपटॉप, और कॉफ़ी मशीन के पास अजीब सी ख़ामोशी।" },
+        { "enter": "vikram", "at": 0.6, "from": "right" },
+        { "prop": "file_folder", "char": "vikram", "anchor": "hand_r" },
+        { "say": "vikram", "text": "नए इंटर्न? बढ़िया। समय बर्बाद नहीं करेंगे।", "emotion": "neutral", "move": "walk" },
+        { "say": "vikram", "text": "कल सुबह दस बजे क्लाइंट पिच है। और डेक आधा अधूरा पड़ा है।", "emotion": "determined", "move": "hold_phone" },
+        { "prop": "none", "char": "vikram", "anchor": "hand_r" },
+        { "say": "vikram", "text": "पूरा करना है — कल सुबह दस बजे तक। मंज़ूर है, या आज ही घर जाने का इरादा है?", "emotion": "angry", "move": "point" },
+        { "say": "zoya", "text": "धीरे से: पहले ही दिन? ओह, बेचारी किस्मत।", "emotion": "smug", "move": "cross_arms" }
+      ],
+      "prompt": "Vikram Sir jawab ka intezaar kar rahe hain.",
+      "choice": [
+        { "text": "Done, sir. Kal 10 baje deck aapki table pe hoga 💼", "style": "confident", "score": 10, "effects": { "start_objective": "o1", "impression": 2, "himmat": 1 }, "goto": "w2",
+          "reaction": [ { "say": "vikram", "text": "अच्छा। आत्मविश्वास पसंद है। अब काम से साबित करो।", "emotion": "smile", "move": "nod" }, { "emote": "zoya", "emotion": "surprised" } ] },
+        { "text": "Sir… main try {m:karunga|f:karungi}, par itna kam time…", "style": "timid", "score": 2, "effects": { "start_objective": "o1", "impression": -1 }, "goto": "w2",
+          "reaction": [ { "say": "vikram", "text": "ट्राई नहीं। करना है। यहाँ कोई हाथ नहीं पकड़ेगा।", "emotion": "disgusted", "move": "shake_head" }, { "say": "zoya", "text": "हम्म।", "emotion": "bored", "move": "shrug" } ] },
+        { "text": "Pehle hafte mein itna kaam? Ye fair nahi hai, sir.", "style": "rude", "score": 3, "effects": { "decline_objective": "o1", "impression": -3, "himmat": 2 }, "goto": "w2_zoya",
+          "reaction": [ { "say": "vikram", "text": "फ़ेयर? ठीक है। ज़ोया, डेक तुम्हारा। और तुम… देखते हैं किस काम के हो।", "emotion": "angry", "move": "turn" }, { "exit": "vikram", "to": "right" } ] }
+      ]
+    },
+
+    "w2": {
+      "title": "Ek Offer", "background": "office", "time": "dusk", "music": "calm_campus",
+      "cast": [ { "id": "zoya", "at": 0.62 } ],
+      "steps": [
+        { "narrate": "शाम हो चुकी है। आधा ऑफ़िस ख़ाली। ज़ोया अपनी कुर्सी घुमाकर तुम्हारी तरफ़ आती है।" },
+        { "prop": "laptop", "char": "zoya", "anchor": "hand_l" },
+        { "say": "zoya", "text": "पहला दिन और सीधा विक्रम सर का टारगेट? बधाई हो।", "emotion": "smug", "move": "hands_on_hips" },
+        { "say": "zoya", "text": "सुनो। मेरे पास पिछले क्लाइंट का पूरा मार्केट डेटा है। मिलकर करें? आधा काम, आधा क्रेडिट।", "emotion": "thinking", "move": "point" },
+        { "open_reply": {
+            "char": "zoya",
+            "prompt": "Zoya ko jawab do",
+            "placeholder": "Jaise: haan milkar karte hain…",
+            "choices": ["Deal! Milkar karte hain", "Nahi, main khud kar {m:lunga|f:lungi}"],
+            "intents": [
+              { "id": "team", "style": "kind", "score": 6, "match": ["haan", "deal", "milkar", "saath", "team", "chalo", "zaroor", "thanks", "together", "partner"], "effects": { "team": 3 },
+                "reaction": [ { "say": "zoya", "text": "डील। पर याद रखना, आधा क्रेडिट मेरा।", "emotion": "happy", "move": "nod" } ], "goto": "w3_chat" },
+              { "id": "solo", "style": "confident", "score": 4, "match": ["nahi", "akele", "khud", "solo", "zarurat nahi", "apna", "myself", "alone"], "effects": { "himmat": 2, "team": -2 },
+                "reaction": [ { "say": "zoya", "text": "ओके, लोन वुल्फ़। ऑल द बेस्ट।", "emotion": "bored", "move": "shrug" } ], "goto": "w3_chat" }
+            ],
+            "fallback": { "say": "सोच लो। ऑफ़र आज रात बारह बजे तक है।", "char": "zoya", "emotion": "smile", "effects": { "team": 1 }, "goto": "w3_chat" }
+        } }
+      ]
+    },
+
+    "w2_zoya": {
+      "title": "Ulta Pada", "background": "office", "time": "dusk", "music": "tension",
+      "cast": [ { "id": "zoya", "at": 0.62 } ],
+      "steps": [
+        { "narrate": "डेक अब ज़ोया के पास है। और विक्रम सर की नज़र में तुम… शिकायत करने वाले इंटर्न।" },
+        { "say": "zoya", "text": "थैंक्स, तुम्हारी वजह से मेरी रात ख़राब हो गई।", "emotion": "angry", "move": "cross_arms" },
+        { "say": "zoya", "text": "वैसे… अकेले नहीं होगा। मदद का मूड हो तो बताना।", "emotion": "worried", "move": "look_down" }
+      ],
+      "choice": [
+        { "text": "Sorry. Chalo, saath mein karte hain. Raat lambi hai ☕", "style": "kind", "score": 6, "effects": { "team": 4, "start_objective": "o1" }, "goto": "w3_chat",
+          "reaction": [ { "say": "zoya", "text": "ठीक है। पहले स्लाइड पाँच से शुरू करो।", "emotion": "smile", "move": "nod" } ] },
+        { "text": "Tumhara deck, tumhari problem 😏", "style": "rude", "score": 2, "effects": { "team": -4, "himmat": 1 }, "goto": "w3_chat",
+          "reaction": [ { "say": "zoya", "text": "वाह। याद रखूँगी।", "emotion": "furious", "move": "walk_away" }, { "exit": "zoya", "to": "right" } ] }
+      ]
+    },
+
+    "w3_chat": {
+      "title": "11:48 PM", "type": "chat", "with": "zoya", "header": "Zoya Khan", "checkpoint": "Raat 11:48", "time": "night", "music": "night_city",
+      "steps": [
+        { "narrate": "रात के 11:48। लैपटॉप पर डेक की स्लाइड चौदह। फ़ोन वाइब्रेट होता है।" },
+        { "say": "zoya", "text": "अभी तक ऑफ़िस में? मैं भी।", "time": "11:48 PM", "delay": 1200, "emotion": "neutral" },
+        { "say": "zoya", "text": "मेरे पास आख़िरी तीन स्लाइड्स तैयार हैं — मार्केट डेटा, ग्राफ़, सब कुछ। भेज दूँ?", "time": "11:49 PM", "delay": 2000, "emotion": "thinking" },
+        { "open_reply": {
+            "char": "zoya",
+            "prompt": "Zoya ko reply karo",
+            "placeholder": "Message likho…",
+            "choices": ["Haan bhejo please 🙏", "Nahi, zarurat nahi"],
+            "intents": [
+              { "id": "yes", "style": "kind", "score": 5, "match": ["haan", "bhejo", "bhej do", "please", "thanks", "zaroor", "send", "help", "jaldi"], "effects": { "team": 2, "used_zoya_slides": true } },
+              { "id": "no", "style": "confident", "score": 3, "match": ["nahi", "zarurat nahi", "khud", "akele", "mat bhejo", "no need", "rehne do"], "effects": { "himmat": 2, "team": -1 } }
+            ],
+            "fallback": { "say": "हैलो? रिप्लाई तो करो। मैं सो जाऊँगी।", "char": "zoya", "emotion": "bored", "effects": { "team": -1 } }
+        } },
+        { "say": "zoya", "text": "एक बात और। कल विक्रम सर पूछेंगे कि डेक किसने बनाया। तब क्या कहने का इरादा है?", "time": "11:52 PM", "delay": 2200, "emotion": "worried" }
+      ],
+      "prompt": "Zoya jawab ka intezaar kar rahi hai.",
+      "choice": [
+        { "text": "Dono ka naam jayega. Team hain hum 🤝", "style": "kind", "score": 6, "effects": { "team": 4, "shared_credit": true }, "goto": "w4_pitch",
+          "reaction": [ { "say": "zoya", "text": "पहली बार किसी ने ऐसा कहा। थैंक्स। गुड नाइट!", "time": "11:53 PM", "delay": 1200, "emotion": "happy" } ] },
+        { "text": "Kal dekhte hain 😴", "style": "neutral", "score": 1, "effects": { "team": -1 }, "goto": "w4_pitch",
+          "reaction": [ { "say": "zoya", "text": "हम्म… ठीक है।", "time": "11:53 PM", "delay": 1000, "emotion": "sad" } ] },
+        { "text": "(Seen karke chhod do)", "style": "cold", "score": 1, "kind": "ignore", "effects": { "team": -3 }, "goto": "w4_pitch" },
+        { "text": "(Block karo — focus chahiye)", "style": "rude", "score": 1, "kind": "block", "effects": { "team": -6, "himmat": 1 }, "goto": "w4_pitch" }
+      ]
+    },
+
+    "w4_pitch": {
+      "title": "Pitch", "type": "pov", "checkpoint": "Pitch meeting", "background": "office", "time": "day", "music": "tension",
+      "cast": [ { "id": "vikram", "at": 0.5 } ], "audience": 4,
+      "steps": [
+        { "set": { "start_objective": "o2" } },
+        { "narrate": "सुबह दस बजे। मीटिंग रूम। सामने विक्रम सर, पीछे क्लाइंट की टीम। सबकी नज़र तुम पर।" },
+        { "say": "vikram", "text": "तो। डेक तुम्हारा है। शुरू करो।", "emotion": "neutral", "move": "cross_arms" },
+        { "audience": "murmur" },
+        { "narrate": "बीस मिनट। चौदह स्लाइड्स। क्लाइंट सिर हिलाते हैं।" },
+        { "if": "used_zoya_slides == true",
+          "then": [ { "say": "vikram", "text": "ये मार्केट डेटा… काफ़ी गहरा है। किसने निकाला?", "emotion": "surprised", "move": "point" } ],
+          "else": [ { "say": "vikram", "text": "प्रेज़ेंटेशन ठीक था। पर ये डेटा पुराना है। किसने बनाया ये डेक?", "emotion": "thinking", "move": "point" } ] }
+      ],
+      "prompt": "Vikram Sir seedha tumse pooch rahe hain.",
+      "choice": [
+        { "text": "Zoya ne, sir. Ye team ka kaam hai.", "if": "used_zoya_slides == true", "style": "kind", "score": 10, "effects": { "team": 3, "impression": 3, "shared_credit": true, "complete_objective": "o1" }, "goto": "w5_rooftop",
+          "reaction": [ { "say": "vikram", "text": "ईमानदारी। ये सिखाई नहीं जाती। अच्छा काम, दोनों का।", "emotion": "smile", "move": "nod" }, { "audience": "cheer" } ] },
+        { "text": "Maine, sir. Poori raat jaag kar 😎", "if": "used_zoya_slides == true", "style": "rude", "score": 4, "effects": { "impression": 4, "team": -6, "took_credit": true, "complete_objective": "o1" }, "goto": "w5_rooftop",
+          "reaction": [ { "say": "vikram", "text": "हम्म। अच्छा। बहुत अच्छा।", "emotion": "smile", "move": "nod" } ] },
+        { "text": "Maine, sir. Data kal tak update kar {m:dunga|f:dungi} — promise.", "if": "used_zoya_slides == false", "style": "confident", "score": 8, "effects": { "impression": 3, "complete_objective": "o1" }, "goto": "w5_rooftop",
+          "reaction": [ { "say": "vikram", "text": "ग़लती मानना और सुधार का प्लान देना — यही चाहिए।", "emotion": "smile", "move": "nod" } ] },
+        { "text": "Pata nahi sir… sab ne thoda thoda kiya…", "style": "timid", "score": 0, "effects": { "impression": -3, "fail_objective": "o1" }, "goto": "w5_rooftop",
+          "reaction": [ { "say": "vikram", "text": "पता नहीं? अपने ही काम का?", "emotion": "disgusted", "move": "shake_head" }, { "audience": "murmur" } ] }
+      ]
+    },
+
+    "w5_rooftop": {
+      "title": "Chai on the Roof", "checkpoint": "Chhat par chai", "background": "rooftop", "time": "dusk", "music": "romance",
+      "cast": [ { "id": "zoya", "at": 0.6 } ],
+      "steps": [
+        { "set": { "complete_objective": "o2" } },
+        { "narrate": "शुक्रवार की शाम। ऑफ़िस की छत। शहर की बत्तियाँ जलने लगी हैं।" },
+        { "enter": "zoya", "at": 0.6, "from": "right" },
+        { "prop": "chai_glass", "char": "zoya", "anchor": "hand_r" },
+        { "if": "took_credit == true",
+          "then": [
+            { "say": "zoya", "text": "मीटिंग में तो कमाल कर दिया। मेरी स्लाइड्स के साथ।", "emotion": "angry", "move": "cross_arms" },
+            { "say": "zoya", "text": "ख़ैर। सबक़ मिला। इस शहर में किसी पर भरोसा मत करो।", "emotion": "sad", "move": "walk_away" },
+            { "exit": "zoya", "to": "right" }
+          ],
+          "else": [
+            { "say": "zoya", "text": "एक राज़ बताऊँ? मैं ये जॉब ज़्यादा दिन नहीं करने वाली। मेरा अपना स्टार्टअप आइडिया है।", "emotion": "shy", "move": "look_down" },
+            { "if": "team >= 6",
+              "then": [ { "say": "zoya", "text": "और मुझे एक पार्टनर चाहिए। कोई ऐसा जो क्रेडिट बाँटना जानता हो। सोचना ज़रा।", "emotion": "determined", "move": "point" } ],
+              "else": [ { "say": "zoya", "text": "पर वो कहानी फिर कभी। अभी तो बस चाय।", "emotion": "smile", "move": "idle" } ] }
+          ] }
+      ],
+      "prompt": "Shehar ki roshni, haath mein chai.",
+      "choice": [
+        { "text": "Partner? Chalo, karte hain! 🚀", "if": "team >= 6 and took_credit == false", "style": "confident", "score": 10, "effects": { "cofounder": true, "team": 2 }, "goto": "w6_end",
+          "reaction": [ { "say": "zoya", "text": "सच में?! ठीक है, कल से प्लानिंग। नाम मैं सोचूँगी!", "emotion": "laugh", "move": "laugh" } ] },
+        { "text": "Abhi toh yahi job meri duniya hai. Pehle offer, phir sapne.", "style": "neutral", "score": 3, "effects": { "impression": 1 }, "goto": "w6_end" },
+        { "text": "(Chupchaap shehar ko dekho)", "style": "timid", "score": 0, "kind": "action", "effects": { "himmat": -1 }, "goto": "w6_end" }
+      ]
+    },
+
+    "w6_end": {
+      "title": "Shukravar", "background": "office", "time": "night", "music": "calm_campus",
+      "steps": [ { "narrate": "हफ़्ते का आख़िरी ईमेल आता है। सब्जेक्ट: 'इंटर्नशिप रिव्यू'।" } ],
+      "resolve_ending": true
+    },
+
+    "e_startup": {
+      "title": "Apna Startup", "ending": "startup", "background": "cafe", "time": "night", "music": "upbeat",
+      "cast": [ { "id": "zoya", "at": 0.6 } ],
+      "steps": [
+        { "enter": "zoya", "at": 0.6, "from": "left" },
+        { "prop": "laptop", "char": "zoya", "anchor": "hand_l" },
+        { "say": "zoya", "text": "तीन महीने बाद। एक छोटा सा कैफ़े, दो लैपटॉप, और हमारा पहला क्लाइंट!", "emotion": "laugh", "move": "laugh" },
+        { "say": "zoya", "text": "विक्रम सर ने भी शुभकामनाएँ भेजी हैं। कह रहे थे — 'वो इंटर्न, जिसने क्रेडिट बाँटा था।'", "emotion": "happy", "move": "point" },
+        { "fx": { "sparkles": true } },
+        { "narrate": "पहला हफ़्ता ख़त्म हुआ, और एक नई कहानी शुरू।" }
+      ]
+    },
+    "e_offer": {
+      "title": "Full-Time Offer", "ending": "offer", "background": "office", "time": "day", "music": "upbeat",
+      "cast": [ { "id": "vikram", "at": 0.55 }, { "id": "zoya", "at": 0.82 } ],
+      "steps": [
+        { "say": "vikram", "text": "इस हफ़्ते दो लोगों ने मुझे सरप्राइज़ किया। दोनों को फ़ुल-टाइम ऑफ़र।", "emotion": "smile", "move": "nod" },
+        { "say": "zoya", "text": "टीम हैं हम, सर!", "emotion": "laugh", "move": "wave" },
+        { "narrate": "ऑफ़र लेटर पर तुम्हारा नाम। और साथ में एक दोस्त।" }
+      ]
+    },
+    "e_solo": {
+      "title": "Akela Star", "ending": "solo", "background": "office", "time": "night", "music": "sad_piano",
+      "cast": [ { "id": "vikram", "at": 0.6 } ],
+      "steps": [
+        { "say": "vikram", "text": "ऑफ़र तुम्हारा है। काम अच्छा है। बस… टीम में कोई तुम्हारे साथ बैठना नहीं चाहता।", "emotion": "neutral", "move": "cross_arms" },
+        { "narrate": "ऑफ़र मिल गया। पर कैंटीन की टेबल पर तुम्हारे साथ वाली कुर्सी हमेशा ख़ाली रहती है।" }
+      ]
+    },
+    "e_intern": {
+      "title": "Intern Hi Reh Gaye", "ending": "intern", "background": "street", "time": "night", "weather": "rain", "music": "sad_piano",
+      "steps": [
+        { "narrate": "ईमेल छोटा था: 'इस बार नहीं।' बारिश में बस स्टॉप पर पूरा हफ़्ता आँखों के सामने घूमता है।" },
+        { "narrate": "अगली इंटर्नशिप में शायद… पहले दिन ही 'हाँ' कहना।" }
+      ]
+    }
+  },
+  "endings": [
+    { "id": "startup", "title": "Apna Startup", "if": "cofounder == true", "scene": "e_startup", "teaser": "Kabhi kabhi sabse achha offer boss nahi deta.", "kind": "secret" },
+    { "id": "offer", "title": "Full-Time Offer", "if": "impression >= 4 and team >= 4", "scene": "e_offer", "teaser": "Kaam aur dosti, dono.", "kind": "good" },
+    { "id": "solo", "title": "Akela Star", "if": "impression >= 4", "scene": "e_solo", "teaser": "Top par jagah kam hoti hai.", "kind": "bittersweet" },
+    { "id": "intern", "title": "Intern Hi Reh Gaye", "if": "true", "scene": "e_intern", "teaser": "Har hafta pehla hafta nahi hota.", "kind": "bad" }
+  ]
+}

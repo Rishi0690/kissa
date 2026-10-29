@@ -1,0 +1,243 @@
+{
+  "id": "baarish-wali-raat",
+  "title": "Baarish Wali Raat",
+  "tagline": "Aakhri bus chhoot gayi. Bus stop par ek ajnabi ladki. Aur koi uska peecha kar raha hai.",
+  "premise": "Mumbai ki ek bheegi raat. Aakhri bus chhoot chuki hai, aur bus stop par khadi Naina baar-baar peeche mudkar dekh rahi hai — hoodie wala ek ladka station se uske peeche hai. Ruk kar madad karoge, ladke se seedha baat karoge, ya apne raste chale jaoge?",
+  "genre": "Romance Thriller",
+  "tags": ["romance", "rain", "mumbai", "hinglish"],
+  "minutes": 7,
+  "creator": "Kissa Studio",
+  "cover": "cover.webp",
+  "accent": "#7C6CF0",
+  "language": "hi",
+  "player": { "role": "stranger", "role_text": "Ek ajnabi jo galat waqt par sahi jagah hai", "rig": "player_choice", "name": "player_entered", "default_name": "Ishaan", "goal": "Is raat ko sahi anjaam tak pahunchao" },
+  "stats": {
+    "affection": { "start": 0, "min": -10, "max": 20, "label": "Naina Affection", "icon": "favorite" },
+    "trust": { "start": 0, "min": -10, "max": 20, "label": "Naina Trust", "icon": "handshake" },
+    "courage": { "start": 2, "min": 0, "max": 20, "label": "Himmat", "icon": "bolt" }
+  },
+  "flags": { "confronted_rohan": false, "shared_umbrella": false, "gave_number": false, "came_late": false },
+  "rank": { "score": 0, "levels": [ { "name": "Ajnabi", "at": 0 }, { "name": "Hamdard", "at": 18 }, { "name": "Hero", "at": 40 } ] },
+  "characters": [
+    { "id": "naina", "name": "Naina", "name_hi": "नैना", "rig": "female", "bio": "Lucknow se Mumbai aayi. Kitaabon ki dukaan mein kaam karti hai.",
+      "look": { "skin": 2, "hair": "long_straight", "hair_color": "burgundy", "face": "soft", "eyes": "brown", "outfit": "sweater", "outfit_color": "teal", "accessories": ["earrings"] },
+      "voice": { "slot": "female_young_hindi_1", "pitch": 1.0, "speed": 0.95 } },
+    { "id": "rohan", "name": "Rohan", "name_hi": "रोहन", "rig": "male", "bio": "Naina ka purana colleague. 'Na' sunna nahi aata.",
+      "look": { "skin": 3, "hair": "short_messy", "hair_color": "black", "face": "sharp", "eyes": "dark", "outfit": "hoodie", "outfit_color": "black", "accessories": [] },
+      "voice": { "slot": "male_young_hindi_2", "pitch": 0.92, "speed": 1.0 } },
+    { "id": "kaka", "name": "Bansi Kaka", "name_hi": "बंसी काका", "rig": "male", "bio": "Bus stop ke paas chai ki tapri. Sab dekha hai.",
+      "look": { "skin": 4, "hair": "buzz", "hair_color": "ash", "face": "round", "eyes": "dark", "outfit": "kurta", "outfit_color": "white", "accessories": ["beard"] },
+      "voice": { "slot": "male_mature_hindi_1", "pitch": 0.85, "speed": 0.9 } }
+  ],
+  "objectives": [
+    { "id": "o1", "text": "Naina ko surakshit ghar tak pahunchao", "given_by": "naina", "place": "Bandra West", "deadline": "Aaj raat", "accept_choice": true, "on_complete": { "rank": 8, "trust": 2 } },
+    { "id": "o2", "text": "Kal shaam 7 baje Naina ki chhat par chai", "given_by": "naina", "place": "Naina ki building ki chhat", "deadline": "Kal shaam 7 baje", "accept_choice": true, "on_complete": { "rank": 10, "affection": 2 }, "on_fail": { "affection": -2 } }
+  ],
+  "start": "r1",
+  "scenes": {
+    "r1": {
+      "title": "Bus Stop", "type": "pov", "checkpoint": "Bus stop", "background": "street", "time": "night", "weather": "rain", "music": "night_city",
+      "cast": [ { "id": "naina", "at": 0.5 } ], "audience": 2,
+      "steps": [
+        { "narrate": "रात के ग्यारह बजकर चालीस मिनट। आख़िरी बस अभी-अभी निकल गई। बारिश रुकने का नाम नहीं ले रही।" },
+        { "narrate": "बस स्टॉप पर बस एक और इंसान है — एक लड़की, जो बार-बार पीछे मुड़कर देख रही है।" },
+        { "say": "naina", "text": "सुनिए… माफ़ कीजिए। आपके फ़ोन में बैटरी है? मेरा फ़ोन बंद हो गया।", "emotion": "worried", "move": "idle" },
+        { "say": "naina", "text": "वो लड़का… हुडी वाला… स्टेशन से मेरे पीछे है। मुड़कर मत देखिए, प्लीज़।", "emotion": "scared", "move": "look_down" },
+        { "camera": { "zoom": 1.2, "focus": "naina" } },
+        { "open_reply": {
+            "char": "naina",
+            "prompt": "Naina ko jawab do",
+            "placeholder": "Jaise: haan, ye lo phone…",
+            "choices": ["Haan, ye lo phone", "Tum kaun ho?"],
+            "intents": [
+              { "id": "help", "style": "kind", "score": 6, "match": ["haan", "phone", "le lo", "lo", "madad", "call", "ruko", "ghabrao mat", "darr mat", "main hoon", "safe"], "effects": { "trust": 3 },
+                "reaction": [ { "say": "naina", "text": "थैंक यू… सच में। मैं बस अपनी रूममेट को कॉल कर लूँ।", "emotion": "smile", "move": "hold_phone" }, { "prop": "phone", "char": "naina", "anchor": "hand_r" } ] },
+              { "id": "suspicious", "style": "cold", "score": 1, "match": ["kaun", "kyun", "pata nahi", "jhooth", "kaise", "scam", "drama"], "effects": { "trust": -2 },
+                "reaction": [ { "say": "naina", "text": "मैं… कोई ठग नहीं हूँ। बस डरी हुई हूँ।", "emotion": "sad", "move": "step_back" } ] }
+            ],
+            "fallback": { "say": "प्लीज़… बस दो मिनट। मुझे सच में डर लग रहा है।", "char": "naina", "emotion": "crying", "effects": { "trust": -1 } }
+        } }
+      ],
+      "prompt": "Hoodie wala ladka sadak ke us paar ruk gaya hai.",
+      "choice": [
+        { "text": "Main yahin hoon. Chalo, tumhe ghar tak chhod {m:deta|f:deti} hoon — chhatri mere paas hai ☂️", "style": "kind", "score": 8, "effects": { "trust": 3, "affection": 1, "shared_umbrella": true, "start_objective": "o1" }, "goto": "r2_walk",
+          "reaction": [ { "say": "naina", "text": "आप… सच में? ठीक है। बांद्रा वेस्ट, दस मिनट।", "emotion": "surprised", "move": "nod" } ] },
+        { "text": "Ruko. Main us ladke se baat {m:karta|f:karti} hoon 🔥", "style": "confident", "score": 10, "effects": { "courage": 4, "trust": 1 }, "goto": "r2_confront",
+          "reaction": [ { "say": "naina", "text": "नहीं… रुकिए! ओह गॉड।", "emotion": "shocked", "move": "step_back" } ] },
+        { "text": "Sorry… meri bhi battery khatam hai. (Chal do)", "style": "timid", "score": 0, "kind": "action", "effects": { "trust": -4, "courage": -1 }, "goto": "r2_alone",
+          "reaction": [ { "say": "naina", "text": "ओह… कोई बात नहीं।", "emotion": "sad", "move": "look_down" } ] }
+      ]
+    },
+
+    "r2_confront": {
+      "title": "Hoodie Wala", "background": "street", "time": "night", "weather": "rain", "music": "tension",
+      "cast": [ { "id": "rohan", "at": 0.66 } ], "audience": 0,
+      "steps": [
+        { "narrate": "सड़क पार। बारिश में भीगी हुडी, जेब में हाथ।" },
+        { "enter": "rohan", "at": 0.66, "from": "right" },
+        { "say": "rohan", "text": "क्या है? अपना काम करो। ये हमारा मामला है।", "emotion": "angry", "move": "cross_arms" },
+        { "say": "rohan", "text": "मैं बस उससे बात करना चाहता हूँ। वो मेरा फ़ोन नहीं उठाती।", "emotion": "determined", "move": "point" }
+      ],
+      "prompt": "Rohan tumhe ghoor raha hai.",
+      "choice": [
+        { "text": "Phone nahi uthati matlab jawab 'na' hai. Peecha chhodo — warna 100 number door nahi.", "style": "confident", "score": 12, "effects": { "courage": 3, "trust": 3, "confronted_rohan": true }, "goto": "r3_tapri",
+          "reaction": [ { "say": "rohan", "text": "…ठीक है। ठीक है! जा रहा हूँ।", "emotion": "scared", "move": "step_back" }, { "move": "walk_away", "char": "rohan" }, { "exit": "rohan", "to": "right" } ] },
+        { "text": "Ek aur kadam uski taraf, phir dekhna 😤", "style": "rude", "score": 5, "effects": { "courage": 2, "trust": 1, "confronted_rohan": true }, "goto": "r3_tapri",
+          "reaction": [ { "say": "rohan", "text": "धमकी? हुह। देख लूँगा तुम्हें।", "emotion": "furious", "move": "point" }, { "camera": { "shake": 0.5 } }, { "exit": "rohan", "to": "right" } ] },
+        { "text": "Uh… sorry, main bas pooch {m:raha tha|f:rahi thi}…", "style": "timid", "score": 0, "effects": { "courage": -2 }, "goto": "r3_tapri",
+          "reaction": [ { "say": "rohan", "text": "तो पूछ लिया। अब निकलो।", "emotion": "smug", "move": "laugh" } ] }
+      ]
+    },
+
+    "r2_walk": {
+      "title": "Ek Chhatri", "background": "street", "time": "night", "weather": "rain", "music": "romance",
+      "cast": [ { "id": "naina", "at": 0.6 } ],
+      "steps": [
+        { "enter": "naina", "at": 0.6, "from": "left" },
+        { "prop": "umbrella", "char": "naina", "anchor": "hand_r" },
+        { "narrate": "एक छतरी, दो लोग, और पीछे छूटती हुई क़दमों की आवाज़।" },
+        { "say": "naina", "text": "आपका शुक्रिया। आज के ज़माने में कौन रुकता है।", "emotion": "shy", "move": "walk" },
+        { "say": "naina", "text": "वैसे मैं नैना। लखनऊ से हूँ। यहाँ एक किताबों की दुकान में काम करती हूँ।", "emotion": "smile", "move": "idle" }
+      ],
+      "prompt": "Naina halka sa muskura rahi hai.",
+      "choice": [
+        { "text": "Main {player}. Kitaabein? Phir toh tumse dosti karni padegi 📚", "style": "funny", "score": 6, "effects": { "affection": 3 }, "goto": "r3_tapri",
+          "reaction": [ { "say": "naina", "text": "हाहा! पहले बताइए, आख़िरी किताब कौन सी पढ़ी थी?", "emotion": "laugh", "move": "laugh" } ] },
+        { "text": "Wo ladka kaun tha? Sach batao.", "style": "neutral", "score": 3, "effects": { "trust": 1 }, "goto": "r3_tapri",
+          "reaction": [ { "say": "naina", "text": "बताती हूँ… पहले कहीं बारिश से बच लें?", "emotion": "worried", "move": "look_down" } ] }
+      ]
+    },
+
+    "r2_alone": {
+      "title": "Akele", "background": "street", "time": "night", "weather": "rain", "music": "sad_piano",
+      "steps": [
+        { "narrate": "तुमने कदम आगे बढ़ा दिए। मोड़ पर पहुँचकर एक बार पीछे देखा — बस स्टॉप ख़ाली था।" },
+        { "narrate": "वो कहाँ गई, कैसे गई, कभी पता नहीं चलेगा।" }
+      ],
+      "resolve_ending": true
+    },
+
+    "r3_tapri": {
+      "title": "Kaka ki Tapri", "checkpoint": "Kaka ki tapri", "background": "cafe", "time": "night", "weather": "rain", "music": "calm_campus",
+      "cast": [ { "id": "kaka", "at": 0.32 }, { "id": "naina", "at": 0.7 } ], "audience": 2,
+      "steps": [
+        { "narrate": "बस स्टॉप के पास बंसी काका की टपरी। बारिश की आवाज़, और उबलती चाय की ख़ुशबू।" },
+        { "prop": "chai_glass", "char": "kaka", "anchor": "hand_r" },
+        { "say": "kaka", "text": "अरे, इतनी बारिश में? आओ बेटा, अंदर आओ। गरमा-गरम चाय, अदरक वाली।", "emotion": "smile", "move": "wave" },
+        { "if": "confronted_rohan == true",
+          "then": [ { "say": "kaka", "text": "वो हुडी वाला लड़का भाग गया? रोज़ यहाँ घूमता था। अच्छा किया जो उसे टोका।", "emotion": "happy", "move": "nod" } ],
+          "else": [ { "say": "kaka", "text": "वो लड़का अभी भी कोने में खड़ा है। चिंता मत करो, मेरी टपरी पर कोई कुछ नहीं करेगा।", "emotion": "determined", "move": "hands_on_hips" } ] },
+        { "say": "naina", "text": "रोहन मेरे पुराने ऑफ़िस में था। मैंने एक बार कॉफ़ी के लिए मना किया… तब से पीछा नहीं छोड़ता।", "emotion": "sad", "move": "look_down" },
+        { "say": "naina", "text": "आज आपके बिना… पता नहीं क्या होता।", "emotion": "crying", "move": "cry" },
+        { "say": "naina", "text": "सुनिए… कल शाम सात बजे मेरी बिल्डिंग की छत पर आइए। मैं अपने हाथ की चाय पिलाऊँगी — काका से भी अच्छी।", "emotion": "shy", "move": "point" },
+        { "say": "kaka", "text": "हाहा! ये चुनौती है, बेटा।", "emotion": "laugh", "move": "laugh" }
+      ],
+      "prompt": "Naina ka nyota: kal shaam 7 baje, chhat par chai.",
+      "choice": [
+        { "text": "Pakka. Kal 7 baje — aur ye mera number, kuch bhi ho toh call karna 📱", "style": "confident", "score": 10, "effects": { "start_objective": "o2", "gave_number": true, "affection": 2, "trust": 2, "complete_objective": "o1" }, "goto": "r4_chat",
+          "reaction": [ { "say": "naina", "text": "सेव कर लिया। ‘बारिश वाला फ़रिश्ता’ नाम से।", "emotion": "blushing", "move": "hold_phone" } ] },
+        { "text": "Chai toh theek hai… par main kal busy hoon.", "style": "timid", "score": 2, "effects": { "decline_objective": "o2", "affection": -2, "complete_objective": "o1" }, "goto": "r4_chat",
+          "reaction": [ { "say": "naina", "text": "ओह… कोई बात नहीं। नंबर तो दे दीजिए, शुक्रिया कहने के लिए।", "emotion": "sad", "move": "shrug" }, { "set": { "gave_number": true } } ] }
+      ]
+    },
+
+    "r4_chat": {
+      "title": "Agla Din", "type": "chat", "with": "naina", "header": "Naina 📚", "checkpoint": "Agle din ka message", "time": "dusk", "music": "romance",
+      "steps": [
+        { "narrate": "अगले दिन, शाम छह बजकर बारह मिनट।" },
+        { "if": "confronted_rohan == true",
+          "then": [ { "say": "naina", "text": "रोहन ने आज सुबह सॉरी का मैसेज भेजा। और मेरा नंबर डिलीट कर दिया। पता नहीं आपने कल उससे क्या कहा 😄", "time": "6:12 PM", "delay": 2000, "emotion": "happy" } ],
+          "else": [ { "say": "naina", "text": "आज ऑफ़िस से आते वक़्त फिर लगा कोई पीछे है। शायद वहम था।", "time": "6:12 PM", "delay": 2000, "emotion": "worried" } ] },
+        { "say": "naina", "text": "तो? छत पर चाय का इंतज़ाम कर दूँ?", "time": "6:13 PM", "delay": 1500, "emotion": "smile" },
+        { "open_reply": {
+            "char": "naina",
+            "prompt": "Naina ko reply karo",
+            "placeholder": "Message likho…",
+            "choices": ["Haan, {m:aa raha|f:aa rahi} hoon ☕", "Aaj nahi ho payega"],
+            "intents": [
+              { "id": "coming", "style": "kind", "score": 6, "match": ["haan", "aa raha", "aa rahi", "aaunga", "pakka", "mil", "chai", "7 baje", "coming", "ready"], "effects": { "affection": 3 }, "goto": "r5_roof" },
+              { "id": "busy", "style": "cold", "score": 1, "match": ["nahi", "busy", "kaam", "baad mein", "kal", "sorry", "nahi ho payega"], "effects": { "affection": -2, "fail_objective": "o2" }, "goto": "r6_end" }
+            ],
+            "fallback": { "say": "टाइपिंग… टाइपिंग… फिर कुछ नहीं? 😅", "char": "naina", "emotion": "smile", "effects": {} }
+        } }
+      ],
+      "prompt": "Naina online hai.",
+      "choice": [
+        { "text": "Aa {m:raha|f:rahi} hoon. Adrak zyada daalna ☕", "style": "funny", "score": 6, "effects": { "affection": 3 }, "goto": "r5_roof" },
+        { "text": "(2 ghante baad reply karo: 'sorry, late ho gaya')", "style": "neutral", "score": 1, "kind": "delay", "effects": { "affection": -1, "came_late": true }, "goto": "r5_roof",
+          "reaction": [ { "say": "naina", "text": "चाय दो बार ठंडी हो चुकी है। पर… आ जाइए।", "time": "8:20 PM", "delay": 1200, "emotion": "bored" } ] },
+        { "text": "(Ignore karo)", "style": "cold", "score": 0, "kind": "ignore", "effects": { "affection": -4, "fail_objective": "o2" }, "goto": "r6_end" }
+      ]
+    },
+
+    "r5_roof": {
+      "title": "Chhat Par Chai", "checkpoint": "Chhat par chai", "background": "rooftop", "time": "dusk", "music": "romance",
+      "cast": [ { "id": "naina", "at": 0.6 } ],
+      "steps": [
+        { "set": { "complete_objective": "o2" } },
+        { "narrate": "छत पर हल्की-हल्की रोशनी की लड़ियाँ। दूर समंदर की तरफ़ से ठंडी हवा।" },
+        { "enter": "naina", "at": 0.6, "from": "right" },
+        { "prop": "chai_glass", "char": "naina", "anchor": "hand_r" },
+        { "if": "came_late == true",
+          "then": [ { "say": "naina", "text": "देर से सही। चाय फिर से बना दी है।", "emotion": "bored", "move": "cross_arms" } ],
+          "else": [ { "say": "naina", "text": "टाइम पे! लीजिए, काका से अच्छी है या नहीं — सच बताइए।", "emotion": "happy", "move": "wave" } ] },
+        { "say": "naina", "text": "पता है, मुंबई आकर पहली बार लगा कि ये शहर इतना भी अजनबी नहीं है।", "emotion": "shy", "move": "look_down" },
+        { "say": "naina", "text": "कल रात अगर कोई न रुकता तो… ख़ैर। कोई रुका — आप।", "emotion": "blushing", "move": "idle" }
+      ],
+      "prompt": "Shehar ki roshni, Naina ki muskaan.",
+      "choice": [
+        { "text": "Baarish phir hogi. Agli baar bhi chhatri main hi {m:launga|f:laungi} ☂️", "style": "confident", "score": 10, "effects": { "affection": 4 }, "goto": "r6_end",
+          "reaction": [ { "say": "naina", "text": "वादा?", "emotion": "blushing", "move": "nod" }, { "fx": { "sparkles": true } } ] },
+        { "text": "Chai kamaal hai. Kaka ko mat batana 😄", "style": "funny", "score": 6, "effects": { "affection": 2, "trust": 1 }, "goto": "r6_end",
+          "reaction": [ { "say": "naina", "text": "हाहा! ये राज़ हमारे बीच।", "emotion": "laugh", "move": "laugh" } ] },
+        { "text": "Main bas madad kar {m:raha tha|f:rahi thi}. Isme kuch khaas nahi.", "style": "timid", "score": 1, "effects": { "affection": -1 }, "goto": "r6_end",
+          "reaction": [ { "say": "naina", "text": "ओह। अच्छा… हाँ, बिल्कुल।", "emotion": "sad", "move": "turn" } ] }
+      ]
+    },
+
+    "r6_end": {
+      "title": "Raat Dhalti Hai", "background": "street", "time": "night", "music": "night_city",
+      "steps": [ { "narrate": "बारिश थम चुकी है। सड़क पर स्ट्रीटलाइट की परछाइयाँ, और एक रात जो याद रहेगी।" } ],
+      "resolve_ending": true
+    },
+
+    "e_romance": {
+      "title": "Baarish Ke Baad", "ending": "romance", "background": "rooftop", "time": "night", "music": "romance",
+      "cast": [ { "id": "naina", "at": 0.6 } ],
+      "steps": [
+        { "enter": "naina", "at": 0.6, "from": "right" },
+        { "say": "naina", "text": "अगले हफ़्ते फिर बारिश की भविष्यवाणी है। छतरी मत लाइएगा… मेरे पास एक ही काफ़ी है।", "emotion": "blushing", "move": "look_down" },
+        { "fx": { "sparkles": true } },
+        { "narrate": "कुछ कहानियाँ बस स्टॉप पर शुरू होती हैं। ये उनमें से एक है।" }
+      ]
+    },
+    "e_hero": {
+      "title": "Raat Ka Hero", "ending": "hero", "background": "street", "time": "night", "music": "upbeat",
+      "cast": [ { "id": "kaka", "at": 0.5 } ],
+      "steps": [
+        { "enter": "kaka", "at": 0.5, "from": "left" },
+        { "say": "kaka", "text": "पूरे मोहल्ले में बात फैल गई है। जिसने उस लड़के को टोका, उसकी चाय आज से फ़्री!", "emotion": "laugh", "move": "laugh" },
+        { "narrate": "नैना से दोबारा मिलना हो न हो — उस रात किसी के लिए आवाज़ उठी, तुम्हारी आवाज़। यही काफ़ी है।" }
+      ]
+    },
+    "e_strangers": {
+      "title": "Ajnabi Hi Sahi", "ending": "strangers", "background": "street", "time": "night", "music": "calm_campus",
+      "steps": [
+        { "say": "naina", "text": "शुक्रिया, अजनबी। आपका नाम फ़ोन में रहेगा… और वो रात याद में।", "time": "11:58 PM", "emotion": "smile" },
+        { "narrate": "दो लोग, एक बारिश, और फिर अपने-अपने रास्ते।" }
+      ]
+    },
+    "e_alone": {
+      "title": "Akeli Raat", "ending": "alone", "background": "street", "time": "night", "weather": "rain", "music": "sad_piano",
+      "steps": [
+        { "narrate": "उस रात के बाद वो बस स्टॉप रोज़ रास्ते में आता है। और हर बारिश में वही सवाल — अगर उस रात रुकना चुना होता तो?" }
+      ]
+    }
+  },
+  "endings": [
+    { "id": "romance", "title": "Baarish Ke Baad", "if": "affection >= 8 and trust >= 4", "scene": "e_romance", "teaser": "Kuch kahaniyan bus stop par shuru hoti hain.", "kind": "good" },
+    { "id": "hero", "title": "Raat Ka Hero", "if": "courage >= 7 and confronted_rohan == true", "scene": "e_hero", "teaser": "Kisi ke liye khade hona.", "kind": "hero" },
+    { "id": "strangers", "title": "Ajnabi Hi Sahi", "if": "trust >= 1", "scene": "e_strangers", "teaser": "Do log, ek baarish.", "kind": "neutral" },
+    { "id": "alone", "title": "Akeli Raat", "if": "true", "scene": "e_alone", "teaser": "Agar rukna chuna hota toh?", "kind": "bad" }
+  ]
+}

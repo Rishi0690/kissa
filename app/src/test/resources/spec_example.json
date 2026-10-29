@@ -1,0 +1,43 @@
+{
+  "id": "first-day", "title": "First Day",
+  "player": { "role": "new_student", "rig": "player_choice", "name": "player_entered" },
+  "stats": { "affection": { "start": 0, "min": -20, "max": 20 }, "trust": { "start": 0, "min": -20, "max": 20 }, "power": { "start": 0, "min": 0, "max": 20 } },
+  "rank": { "score": 0, "levels": [ { "name": "Beginner", "at": 0 }, { "name": "Bold", "at": 25 }, { "name": "Pro", "at": 60 } ] },
+  "characters": [ { "id": "isha", "rig": "female", "look": { "skin": 2, "hair": "long_black", "outfit": "college_blue" },
+      "voice": { "slot": "female_young_hindi_1", "pitch": 1.05, "speed": 1.0, "provider_extras": { "pace": 1.0 } } } ],
+  "objectives": [
+    { "id": "o1", "text": "Survive the first day", "on_complete": { "rank": 10 }, "unlocks": "o2" },
+    { "id": "o2", "text": "Meet Isha at the library tomorrow", "given_by": "isha", "accept_choice": true, "unlocks": "s4" }
+  ],
+  "start": "s1",
+  "scenes": {
+    "s1": { "background": "college_day", "steps": [
+        { "say": "isha", "text": "Do not talk to me again.", "emotion": "angry", "move": "walk_away", "voice_file": "audio/isha_s1_01.opus" },
+        { "set": { "power": -2 } } ],
+      "choice": [
+        { "text": "Sorry... please forgive me", "style": "timid", "score": 0, "effects": { "affection": 1 }, "goto": "s1_dismissed" },
+        { "text": "You will regret ignoring me", "style": "confident", "score": 10, "effects": { "power": 3 }, "goto": "s2" } ] },
+    "s1_dismissed": { "background": "college_day", "steps": [ { "say": "isha", "text": "Whatever.", "emotion": "bored", "voice_file": "audio/isha_s1d.opus" } ], "next": "s2" },
+    "s2": { "type": "chat", "steps": [
+        { "say": "isha", "text": "Are you awake? I need your help.", "voice_file": "audio/isha_s2_01.opus" },
+        { "open_reply": { "prompt": "Reply to Isha",
+            "intents": [
+              { "match": ["help", "yes", "ok", "batao"], "effects": { "trust": 5, "helped_isha": true }, "goto": "s3_help" },
+              { "match": ["no", "aukaat", "yaad hai", "revenge"], "effects": { "power": 5 }, "goto": "s3_cold" } ],
+            "fallback": { "effects": { "trust": 1 }, "goto": "s3_neutral" },
+            "choices": [ "Of course, tell me", "Now you remember me?" ] } } ] },
+    "s3": { "background": "library", "steps": [], "resolve_ending": true },
+    "s3_help": { "background": "library", "steps": [ { "set": { "affection": 10, "complete_objective": "o1" } } ], "resolve_ending": true },
+    "s3_cold": { "background": "library", "steps": [ { "set": { "helped_isha": false } } ], "resolve_ending": true },
+    "s3_neutral": { "background": "library", "steps": [], "resolve_ending": true },
+    "s4": { "background": "library", "steps": [], "resolve_ending": true },
+    "e_good": { "background": "library", "ending": "good", "steps": [ { "say": "isha", "text": "Thank you.", "emotion": "happy", "voice_file": "audio/e1.opus" } ] },
+    "e_revenge": { "background": "college_night", "ending": "revenge", "steps": [ { "say": "isha", "text": "You too?", "emotion": "crying", "voice_file": "audio/e2.opus" } ] },
+    "e_neutral": { "background": "library", "ending": "neutral", "steps": [] }
+  },
+  "endings": [
+    { "id": "good", "if": "affection >= 10 and trust >= 5", "scene": "e_good" },
+    { "id": "revenge", "if": "helped_isha == false", "scene": "e_revenge" },
+    { "id": "neutral", "if": "true", "scene": "e_neutral" }
+  ]
+}
