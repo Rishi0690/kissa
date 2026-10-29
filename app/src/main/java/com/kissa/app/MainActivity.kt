@@ -32,7 +32,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kissa.app.ui.components.AppBackdrop
-import com.kissa.app.ui.scene.SceneScreen
+import com.kissa.app.ui.play.PlayerScreen
+import com.kissa.app.ui.play.StartPoint
 import com.kissa.app.ui.screens.*
 import com.kissa.app.ui.theme.KissaTheme
 import com.kissa.app.ui.theme.LocalAccent
@@ -43,7 +44,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val app = application as KissaApp
-        app.speech // warm up TTS engine early so the first line isn't delayed
         setContent {
             val s by app.settings.state.collectAsStateWithLifecycle()
             KissaTheme(s.themeId, s.accent, s.backdrop) {
@@ -55,20 +55,20 @@ class MainActivity : ComponentActivity() {
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 private val tabs = listOf(
-    Tab("home", "Home", Icons.Rounded.AutoAwesome),
-    Tab("discover", "Discover", Icons.Rounded.Explore),
-    Tab("create", "Create", Icons.Rounded.AddCircle),
+    Tab("home", "Games", Icons.Rounded.SportsEsports),
+    Tab("search", "Search", Icons.Rounded.Search),
     Tab("library", "Library", Icons.Rounded.CollectionsBookmark),
     Tab("settings", "Settings", Icons.Rounded.Tune),
 )
 
 object Routes {
-    fun story(id: String) = "story/$id"
-    fun play(id: String, replay: Long? = null) = "play/$id?replay=${replay ?: -1}"
-    fun character(storyId: String) = "character/$storyId"
-    fun history(storyId: String?) = "history/${storyId ?: "all"}"
-    fun edit(storyId: String) = "create?edit=$storyId"
+    fun game(id: String) = "game/$id"
+    fun setup(id: String) = "setup/$id"
+    /** from: -2 = new run, -1 = autosave, >= 0 = checkpoint index */
+    fun play(id: String, from: Int) = "play/$id?from=$from"
 }
+
+private fun StartPoint.code() = when (this) { StartPoint.New -> -2; StartPoint.Resume -> -1; is StartPoint.Checkpoint -> index }
 
 @Composable
 fun AppNav(startOnboarding: Boolean) {
@@ -76,35 +76,36 @@ fun AppNav(startOnboarding: Boolean) {
     val start = remember { if (startOnboarding) "onboarding" else "home" }
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
-    val showBar = tabs.any { route?.substringBefore("?") == it.route } && !(route?.startsWith("create") == true && !entry?.arguments?.getString("edit").isNullOrEmpty())
+    val showBar = tabs.any { route == it.route }
     Box(Modifier.fillMaxSize()) {
         NavHost(
             nav, startDestination = start,
-            enterTransition = { fadeIn(tween(260)) + slideInHorizontally(tween(320)) { it / 10 } },
-            exitTransition = { fadeOut(tween(200)) },
-            popEnterTransition = { fadeIn(tween(260)) },
-            popExitTransition = { fadeOut(tween(200)) + slideOutHorizontally(tween(300)) { it / 10 } },
+            enterTransition = { fadeIn(tween(240)) + slideInHorizontally(tween(300)) { it / 12 } },
+            exitTransition = { fadeOut(tween(180)) },
+            popEnterTransition = { fadeIn(tween(240)) },
+            popExitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(280)) { it / 12 } },
         ) {
             composable("onboarding") { OnboardingScreen(onDone = { nav.navigate("home") { popUpTo("onboarding") { inclusive = true } } }) }
-            composable("home") { HomeScreen(nav) }
-            composable("discover?tab={tab}", arguments = listOf(navArgument("tab") { type = NavType.StringType; nullable = true; defaultValue = null })) { e -> DiscoverScreen(nav, e.arguments?.getString("tab")) }
-            composable("create?edit={edit}", arguments = listOf(navArgument("edit") { type = NavType.StringType; nullable = true; defaultValue = null })) { e ->
-                CreatorScreen(nav, e.arguments?.getString("edit"))
-            }
-            composable("library") { LibraryScreen(nav) }
-            composable("settings") { SettingsScreen(nav) }
-            composable("story/{id}") { e -> StoryDetailsScreen(nav, e.arguments?.getString("id")!!) }
-            composable("character/{id}") { e -> CharacterProfileScreen(nav, e.arguments?.getString("id")!!) }
-            composable("history/{id}") { e -> HistoryScreen(nav, e.arguments?.getString("id")!!.takeIf { it != "all" }) }
-            composable(
-                "play/{id}?replay={replay}",
-                arguments = listOf(navArgument("replay") { type = NavType.LongType; defaultValue = -1L }),
-                enterTransition = { fadeIn(tween(500)) + scaleIn(tween(500), initialScale = 1.06f) },
-            ) { e ->
+            composable("home") { HomeScreen(onGame = { nav.navigate(Routes.game(it)) }, onSearch = { nav.navigate("search") }, onContinue = { nav.navigate(Routes.play(it, -1)) }) }
+            composable("search") { SearchScreen(onGame = { nav.navigate(Routes.game(it)) }, onBack = { nav.popBackStack() }) }
+            composable("library") { LibraryScreen(onGame = { nav.navigate(Routes.game(it)) }) }
+            composable("settings") { SettingsScreen() }
+            composable("game/{id}") { e ->
                 val id = e.arguments?.getString("id")!!
-                val replay = e.arguments?.getLong("replay")?.takeIf { it >= 0 }
-                SceneScreen(id, replay, onBack = { nav.popBackStack() }, onOpenSettings = { nav.navigate("settings") },
-                    onOpenHistory = { nav.navigate(Routes.history(it)) }, onOpenCharacter = { nav.navigate(Routes.character(it)) })
+                GameDetailScreen(id, onBack = { nav.popBackStack() }, onSetup = { nav.navigate(Routes.setup(id)) }, onContinue = { nav.navigate(Routes.play(id, -1)) })
+            }
+            composable("setup/{id}") { e ->
+                val id = e.arguments?.getString("id")!!
+                RoleSetupScreen(id, onBack = { nav.popBackStack() }, onStart = { nav.navigate(Routes.play(id, -2)) { popUpTo(Routes.setup(id)) { inclusive = true } } })
+            }
+            composable("play/{id}?from={from}", arguments = listOf(navArgument("from") { type = NavType.IntType; defaultValue = -2 }),
+                enterTransition = { fadeIn(tween(450)) + scaleIn(tween(450), initialScale = 1.05f) }) { e ->
+                val id = e.arguments?.getString("id")!!
+                val from = e.arguments?.getInt("from") ?: -2
+                val sp = when { from == -2 -> StartPoint.New; from == -1 -> StartPoint.Resume; else -> StartPoint.Checkpoint(from) }
+                PlayerScreen(id, sp, onExit = { nav.popBackStack() }, onReplay = { p ->
+                    nav.navigate(Routes.play(id, p.code())) { popUpTo("play/{id}?from={from}") { inclusive = true } }
+                })
             }
         }
         AnimatedVisibility(showBar, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
@@ -119,16 +120,16 @@ private fun BottomBar(nav: NavHostController, route: String?) {
     val pal = LocalPalette.current
     Row(
         Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp)).background(pal.bg2.copy(alpha = 0.92f))
+            .clip(RoundedCornerShape(28.dp)).background(pal.bg2.copy(alpha = 0.94f))
             .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(28.dp)).padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         tabs.forEach { t ->
-            val sel = route?.substringBefore("?") == t.route
+            val sel = route == t.route
             Column(
                 Modifier.clip(RoundedCornerShape(18.dp)).clickable {
                     if (!sel) nav.navigate(t.route) { popUpTo("home") { saveState = true }; launchSingleTop = true; restoreState = true }
-                }.padding(horizontal = 10.dp, vertical = 4.dp),
+                }.padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(t.icon, t.label, tint = if (sel) acc else pal.textDim, modifier = Modifier.size(24.dp))

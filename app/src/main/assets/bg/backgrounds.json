@@ -1,0 +1,112 @@
+{
+ "college_corridor": {
+  "bytes": 140322,
+  "layers": {
+   "back": 76434,
+   "mid": 45502,
+   "front": 18386
+  },
+  "mid_top": 352,
+  "w": 1280,
+  "h": 714
+ },
+ "classroom": {
+  "bytes": 125712,
+  "layers": {
+   "back": 74806,
+   "mid": 41982,
+   "front": 8924
+  },
+  "mid_top": 381,
+  "w": 1280,
+  "h": 714
+ },
+ "library": {
+  "bytes": 100692,
+  "layers": {
+   "back": 63844,
+   "mid": 27924,
+   "front": 8924
+  },
+  "mid_top": 381,
+  "w": 1280,
+  "h": 714
+ },
+ "cafe": {
+  "bytes": 169320,
+  "layers": {
+   "back": 104094,
+   "mid": 42368,
+   "front": 22858
+  },
+  "mid_top": 381,
+  "w": 1280,
+  "h": 714
+ },
+ "street": {
+  "bytes": 158844,
+  "layers": {
+   "back": 95890,
+   "mid": 58334,
+   "front": 4620
+  },
+  "mid_top": 395,
+  "w": 1280,
+  "h": 714
+ },
+ "park": {
+  "bytes": 201616,
+  "layers": {
+   "back": 127096,
+   "mid": 59798,
+   "front": 14722
+  },
+  "mid_top": 366,
+  "w": 1280,
+  "h": 714
+ },
+ "forest": {
+  "bytes": 179736,
+  "layers": {
+   "back": 103818,
+   "mid": 60876,
+   "front": 15042
+  },
+  "mid_top": 381,
+  "w": 1280,
+  "h": 714
+ },
+ "bedroom": {
+  "bytes": 120214,
+  "layers": {
+   "back": 74854,
+   "mid": 36436,
+   "front": 8924
+  },
+  "mid_top": 395,
+  "w": 1280,
+  "h": 714
+ },
+ "office": {
+  "bytes": 139324,
+  "layers": {
+   "back": 79040,
+   "mid": 43728,
+   "front": 16556
+  },
+  "mid_top": 366,
+  "w": 1280,
+  "h": 714
+ },
+ "rooftop": {
+  "bytes": 128866,
+  "layers": {
+   "back": 80320,
+   "mid": 43926,
+   "front": 4620
+  },
+  "mid_top": 381,
+  "w": 1280,
+  "h": 714
+ }
+}

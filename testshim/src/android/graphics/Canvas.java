@@ -38,7 +38,24 @@ public class Canvas {
   public void drawLine(float x1, float y1, float x2, float y2, Paint p) { Paint.Style s = p.style; p.style = Paint.Style.STROKE; paint(new Line2D.Float(x1, y1, x2, y2), p); p.style = s; }
   public void drawPoint(float x, float y, Paint p) {}
   private Composite alphaOn(Paint p) { Composite old = g.getComposite(); float a = p == null ? 1f : p.getAlpha() / 255f; if (a < 0.999f) g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, a))); return old; }
-  public void drawBitmap(Bitmap b, float x, float y, Paint p) { Composite o = alphaOn(p); AffineTransform t = g.getTransform(); g.translate(x, y); g.drawImage(b.img, 0, 0, null); g.setTransform(t); g.setComposite(o); }
-  public void drawBitmap(Bitmap b, Rect s, Rect d, Paint p) { Composite o = alphaOn(p); g.drawImage(b.img, d.left, d.top, d.right, d.bottom, s.left, s.top, s.right, s.bottom, null); g.setComposite(o); }
+  /** Honors PorterDuffColorFilter MULTIPLY/MODULATE/SRC_IN (used for runtime tinting of rig parts). */
+  private java.awt.image.BufferedImage filtered(Bitmap b, Paint p) {
+    if (p == null || !(p.cf instanceof PorterDuffColorFilter)) return b.img;
+    PorterDuffColorFilter f = (PorterDuffColorFilter) p.cf;
+    java.util.Map<Integer, java.awt.image.BufferedImage> cache = TINTS.computeIfAbsent(b.img, k -> new java.util.HashMap<>());
+    int key = f.color * 31 + f.mode.ordinal();
+    java.awt.image.BufferedImage hit = cache.get(key); if (hit != null) return hit;
+    int w = b.img.getWidth(), h = b.img.getHeight(); int[] px = b.img.getRGB(0, 0, w, h, null, 0, w);
+    int cr = (f.color >> 16) & 255, cg = (f.color >> 8) & 255, cb = f.color & 255, ca = (f.color >>> 24);
+    for (int i = 0; i < px.length; i++) { int c = px[i]; int a = c >>> 24; int r = (c >> 16) & 255, gg = (c >> 8) & 255, bb = c & 255;
+      if (f.mode == PorterDuff.Mode.SRC_IN || f.mode == PorterDuff.Mode.SRC_ATOP) { r = cr; gg = cg; bb = cb; a = a * ca / 255; }
+      else { r = r * cr / 255; gg = gg * cg / 255; bb = bb * cb / 255; }
+      px[i] = (a << 24) | (r << 16) | (gg << 8) | bb; }
+    java.awt.image.BufferedImage out = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB); out.setRGB(0, 0, w, h, px, 0, w);
+    cache.put(key, out); return out;
+  }
+  static final java.util.WeakHashMap<java.awt.image.BufferedImage, java.util.Map<Integer, java.awt.image.BufferedImage>> TINTS = new java.util.WeakHashMap<>();
+  public void drawBitmap(Bitmap b, float x, float y, Paint p) { Composite o = alphaOn(p); AffineTransform t = g.getTransform(); g.translate(x, y); g.drawImage(filtered(b, p), 0, 0, null); g.setTransform(t); g.setComposite(o); }
+  public void drawBitmap(Bitmap b, Rect s, Rect d, Paint p) { Composite o = alphaOn(p); g.drawImage(filtered(b, p), d.left, d.top, d.right, d.bottom, s.left, s.top, s.right, s.bottom, null); g.setComposite(o); }
   public void drawVertices(VertexMode m, int c, float[] v, int vo, float[] t, int to, int[] col, int co, short[] i, int io, int ic, Paint p) {}
 }

@@ -11,3 +11,4 @@ keystore.properties
 .DS_Store
 captures/
 testshim/out/
+tools/voicegen/.cache/

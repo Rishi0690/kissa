@@ -15,13 +15,16 @@ android {
         applicationId = "com.kissa.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.1.0"
+        versionCode = 4
+        versionName = "3.0.0"
         vectorDrawables { useSupportLibrary = true }
         // OPTIONAL Kissa backend (Cloudflare Worker). Default (empty) = direct-key mode: the user pastes their own Gemini key.
         // Set -PkissaBackendUrl=https://... to build a backend-mode APK where the server holds the key instead.
         val backendUrl = (project.findProperty("kissaBackendUrl") as String?) ?: ""
         buildConfigField("String", "KISSA_BACKEND_URL", "\"" + backendUrl + "\"")
+        // Phase 2 CDN catalog (catalog.json + game packs). Empty = bundled launch games only (V1, fully offline).
+        val catalogUrl = (project.findProperty("kissaCatalogUrl") as String?) ?: ""
+        buildConfigField("String", "CATALOG_URL", "\"" + catalogUrl + "\"")
     }
 
     val keystoreProps = Properties().apply {
@@ -61,6 +64,7 @@ android {
     testOptions { unitTests.isReturnDefaultValues = true; unitTests.all {
         it.systemProperty("shots", System.getProperty("shots") ?: "false")
         it.systemProperty("live", System.getProperty("live") ?: "false")
+        System.getProperty("previewOut")?.let { p -> it.systemProperty("previewOut", p) }
         System.getProperty("testProxyPort")?.let { p -> it.systemProperty("testProxyPort", p) }
         System.getProperty("voiceOut")?.let { p -> it.systemProperty("voiceOut", p) }
     } }

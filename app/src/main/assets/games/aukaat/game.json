@@ -4,342 +4,1678 @@
   "tagline": "Pehle din sabke saamne zaleel hue. Raat 1:03 baje usi ka message aaya.",
   "premise": "Tum college mein naye ho. Pehle hi din campus ki sabse popular ladki Tanvi Oberoi ne sabke saamne tumhari bezzati kar di. Usi raat 1:03 AM par uska message aata hai — use tumhari madad chahiye. Madad karoge, badla loge, ya ignore? Har jawab tumhari power, trust aur ending badalta hai.",
   "genre": "College Drama",
-  "tags": ["college", "revenge", "romance", "hinglish"],
+  "tags": [
+    "college",
+    "revenge",
+    "romance",
+    "hinglish"
+  ],
   "minutes": 8,
   "creator": "Kissa Studio",
   "cover": "cover.webp",
   "accent": "#E8475F",
   "language": "hi",
-  "player": { "role": "new_student", "role_text": "Naya student jise sab kam samajhte hain", "rig": "player_choice", "name": "player_entered", "default_name": "Aarav", "goal": "Pehla hafta izzat ke saath survive karo" },
-  "stats": {
-    "power": { "start": 2, "min": 0, "max": 20, "label": "Power", "icon": "bolt" },
-    "trust": { "start": 0, "min": -20, "max": 20, "label": "Tanvi Trust", "icon": "handshake" },
-    "dosti": { "start": 0, "min": -10, "max": 20, "label": "Meher Dosti", "icon": "favorite" }
+  "player": {
+    "role": "new_student",
+    "role_text": "Naya student jise sab kam samajhte hain",
+    "rig": "player_choice",
+    "name": "player_entered",
+    "default_name": "Aarav",
+    "goal": "Pehla hafta izzat ke saath survive karo"
   },
-  "flags": { "helped_tanvi": false, "revenge": false, "blocked_tanvi": false, "stood_up": false },
-  "items": { "proof_video": "Sahil ki dhamki ki recording" },
-  "rank": { "score": 0, "levels": [ { "name": "Fresher", "at": 0 }, { "name": "Bold", "at": 20 }, { "name": "Campus Legend", "at": 45 } ] },
+  "stats": {
+    "power": {
+      "start": 2,
+      "min": 0,
+      "max": 20,
+      "label": "Power",
+      "icon": "bolt"
+    },
+    "trust": {
+      "start": 0,
+      "min": -20,
+      "max": 20,
+      "label": "Tanvi Trust",
+      "icon": "handshake"
+    },
+    "dosti": {
+      "start": 0,
+      "min": -10,
+      "max": 20,
+      "label": "Meher Dosti",
+      "icon": "favorite"
+    }
+  },
+  "flags": {
+    "helped_tanvi": false,
+    "revenge": false,
+    "blocked_tanvi": false,
+    "stood_up": false
+  },
+  "items": {
+    "proof_video": "Sahil ki dhamki ki recording"
+  },
+  "rank": {
+    "score": 0,
+    "levels": [
+      {
+        "name": "Fresher",
+        "at": 0
+      },
+      {
+        "name": "Bold",
+        "at": 20
+      },
+      {
+        "name": "Campus Legend",
+        "at": 45
+      }
+    ]
+  },
   "characters": [
-    { "id": "tanvi", "name": "Tanvi", "name_hi": "तन्वी", "rig": "female", "bio": "Campus ki queen. Tez zubaan, chhupa hua dard.",
-      "look": { "skin": 1, "hair": "long_wavy", "hair_color": "black", "face": "sharp", "eyes": "brown", "outfit": "college_blazer", "outfit_color": "navy", "accessories": ["earrings"] },
-      "voice": { "slot": "female_young_hindi_1", "pitch": 1.05, "speed": 1.0, "provider_extras": { "pace": 1.0 } } },
-    { "id": "sahil", "name": "Sahil", "name_hi": "साहिल", "rig": "male", "bio": "Tanvi ka 'dost'. Sabko neecha dikhana uska shauk hai.",
-      "look": { "skin": 2, "hair": "undercut", "hair_color": "dark_brown", "face": "sharp", "eyes": "dark", "outfit": "denim_jacket", "outfit_color": "black", "accessories": ["watch"] },
-      "voice": { "slot": "male_young_hindi_1", "pitch": 0.95, "speed": 1.05 } },
-    { "id": "meher", "name": "Meher", "name_hi": "मेहर", "rig": "female", "bio": "Class ki topper. Chup rehti hai, sab dekhti hai.",
-      "look": { "skin": 3, "hair": "braid", "hair_color": "dark_brown", "face": "round", "eyes": "dark", "outfit": "kurta", "outfit_color": "mustard", "accessories": ["glasses_round", "bindi"] },
-      "voice": { "slot": "female_young_hindi_2", "pitch": 1.1, "speed": 0.95 } }
+    {
+      "id": "tanvi",
+      "name": "Tanvi",
+      "name_hi": "तन्वी",
+      "rig": "female",
+      "bio": "Campus ki queen. Tez zubaan, chhupa hua dard.",
+      "look": {
+        "skin": 1,
+        "hair": "long_wavy",
+        "hair_color": "black",
+        "face": "sharp",
+        "eyes": "brown",
+        "outfit": "college_blazer",
+        "outfit_color": "navy",
+        "accessories": [
+          "earrings"
+        ]
+      },
+      "voice": {
+        "slot": "female_young_hindi_1",
+        "pitch": 1.05,
+        "speed": 1.0,
+        "provider_extras": {
+          "pace": 1.0
+        }
+      }
+    },
+    {
+      "id": "sahil",
+      "name": "Sahil",
+      "name_hi": "साहिल",
+      "rig": "male",
+      "bio": "Tanvi ka 'dost'. Sabko neecha dikhana uska shauk hai.",
+      "look": {
+        "skin": 2,
+        "hair": "undercut",
+        "hair_color": "dark_brown",
+        "face": "sharp",
+        "eyes": "dark",
+        "outfit": "denim_jacket",
+        "outfit_color": "black",
+        "accessories": [
+          "watch"
+        ]
+      },
+      "voice": {
+        "slot": "male_young_hindi_1",
+        "pitch": 0.95,
+        "speed": 1.05
+      }
+    },
+    {
+      "id": "meher",
+      "name": "Meher",
+      "name_hi": "मेहर",
+      "rig": "female",
+      "bio": "Class ki topper. Chup rehti hai, sab dekhti hai.",
+      "look": {
+        "skin": 3,
+        "hair": "braid",
+        "hair_color": "dark_brown",
+        "face": "round",
+        "eyes": "dark",
+        "outfit": "kurta",
+        "outfit_color": "mustard",
+        "accessories": [
+          "glasses_round",
+          "bindi"
+        ]
+      },
+      "voice": {
+        "slot": "female_young_hindi_2",
+        "pitch": 1.1,
+        "speed": 0.95
+      }
+    }
   ],
   "objectives": [
-    { "id": "o1", "text": "Pehla din survive karo", "place": "College", "deadline": "Aaj", "on_complete": { "rank": 5 }, "unlocks": "o2" },
-    { "id": "o2", "text": "Tanvi se library ki seedhiyon par milo", "given_by": "tanvi", "place": "Library ki seedhiyan", "deadline": "Kal shaam 5 baje", "accept_choice": true, "on_complete": { "rank": 10, "power": 2 }, "on_fail": { "power": -1 } },
-    { "id": "o3", "text": "Sahil ki dhamki ka sach sabke saamne lao", "given_by": "tanvi", "place": "Canteen", "deadline": "Kal lunch break", "accept_choice": true, "on_complete": { "rank": 10 }, "on_fail": { "trust": -2 } }
+    {
+      "id": "o1",
+      "text": "Pehla din survive karo",
+      "place": "College",
+      "deadline": "Aaj",
+      "on_complete": {
+        "rank": 5
+      },
+      "unlocks": "o2"
+    },
+    {
+      "id": "o2",
+      "text": "Tanvi se library ki seedhiyon par milo",
+      "given_by": "tanvi",
+      "place": "Library ki seedhiyan",
+      "deadline": "Kal shaam 5 baje",
+      "accept_choice": true,
+      "on_complete": {
+        "rank": 10,
+        "power": 2
+      },
+      "on_fail": {
+        "power": -1
+      }
+    },
+    {
+      "id": "o3",
+      "text": "Sahil ki dhamki ka sach sabke saamne lao",
+      "given_by": "tanvi",
+      "place": "Canteen",
+      "deadline": "Kal lunch break",
+      "accept_choice": true,
+      "on_complete": {
+        "rank": 10
+      },
+      "on_fail": {
+        "trust": -2
+      }
+    }
   ],
   "start": "s1",
   "scenes": {
     "s1": {
-      "title": "Pehla Din", "checkpoint": "Pehla din", "background": "college_corridor", "time": "day", "music": "calm_campus",
-      "cast": [ { "id": "tanvi", "at": 0.68 }, { "id": "sahil", "at": 0.86 } ], "audience": 6,
+      "title": "Pehla Din",
+      "checkpoint": "Pehla din",
+      "background": "college_corridor",
+      "time": "day",
+      "music": "calm_campus",
+      "cast": [
+        {
+          "id": "tanvi",
+          "at": 0.68
+        },
+        {
+          "id": "sahil",
+          "at": 0.86
+        }
+      ],
+      "audience": 6,
       "steps": [
-        { "objective": "o1", "action": "start" },
-        { "narrate": "कॉलेज का पहला दिन। हाथ में किताबें, दिल में घबराहट, और सामने पूरा कॉरिडोर।" },
-        { "enter": "tanvi", "at": 0.6, "from": "right" },
-        { "enter": "sahil", "at": 0.82, "from": "right" },
-        { "prop": "coffee_cup", "char": "tanvi", "anchor": "hand_r" },
-        { "narrate": "एक पल की टक्कर — और तन्वी की कॉफ़ी उसकी ड्रेस पर।" },
-        { "camera": { "shake": 0.6, "zoom": 1.15, "focus": "tanvi" } },
-        { "prop": "none", "char": "tanvi", "anchor": "hand_r" },
-        { "say": "tanvi", "text": "अंधे हो क्या? मेरी पूरी ड्रेस खराब कर दी!", "emotion": "furious", "move": "step_back" },
-        { "audience": "gasp" },
-        { "say": "sahil", "text": "अरे वाह, नया चेहरा। पहले ही दिन तन्वी से टकराने की हिम्मत?", "emotion": "smug", "move": "cross_arms" },
-        { "audience": "laugh" },
-        { "say": "tanvi", "text": "नाम क्या है तुम्हारा? बोलो, सब सुन रहे हैं।", "emotion": "angry", "move": "point" },
-        { "open_reply": {
+        {
+          "objective": "o1",
+          "action": "start"
+        },
+        {
+          "narrate": "कॉलेज का पहला दिन। हाथ में किताबें, दिल में घबराहट, और सामने पूरा कॉरिडोर।",
+          "voice_file": "audio/narrator_f3ac033910d6.ogg"
+        },
+        {
+          "enter": "tanvi",
+          "at": 0.6,
+          "from": "right"
+        },
+        {
+          "enter": "sahil",
+          "at": 0.82,
+          "from": "right"
+        },
+        {
+          "prop": "coffee_cup",
+          "char": "tanvi",
+          "anchor": "hand_r"
+        },
+        {
+          "narrate": "एक पल की टक्कर — और तन्वी की कॉफ़ी उसकी ड्रेस पर।",
+          "voice_file": "audio/narrator_da359d8233a1.ogg"
+        },
+        {
+          "camera": {
+            "shake": 0.6,
+            "zoom": 1.15,
+            "focus": "tanvi"
+          }
+        },
+        {
+          "prop": "none",
+          "char": "tanvi",
+          "anchor": "hand_r"
+        },
+        {
+          "say": "tanvi",
+          "text": "अंधे हो क्या? मेरी पूरी ड्रेस खराब कर दी!",
+          "emotion": "furious",
+          "move": "step_back",
+          "voice_file": "audio/tanvi_68148aa2cb15.ogg"
+        },
+        {
+          "audience": "gasp"
+        },
+        {
+          "say": "sahil",
+          "text": "अरे वाह, नया चेहरा। पहले ही दिन तन्वी से टकराने की हिम्मत?",
+          "emotion": "smug",
+          "move": "cross_arms",
+          "voice_file": "audio/sahil_a3b4dc4b8579.ogg"
+        },
+        {
+          "audience": "laugh"
+        },
+        {
+          "say": "tanvi",
+          "text": "नाम क्या है तुम्हारा? बोलो, सब सुन रहे हैं।",
+          "emotion": "angry",
+          "move": "point",
+          "voice_file": "audio/tanvi_b4e5e3a34e8f.ogg"
+        },
+        {
+          "open_reply": {
             "char": "tanvi",
             "prompt": "Tanvi ko jawab do — apne shabdon mein",
             "placeholder": "Kuch likho… (jaise: Mera naam … hai)",
-            "choices": ["Mera naam yaad rakhna", "Sorry, galti ho gayi", "Dhakka tumne diya tha"],
-            "intents": [
-              { "id": "name", "style": "confident", "score": 6, "match": ["naam", "mera naam", "yaad rakhna", "main hoon", "hu", "hoon", "call me", "my name"], "effects": { "power": 2 },
-                "reaction": [ { "say": "tanvi", "text": "हम्म। नाम तो याद रहेगा… देखते हैं कब तक।", "emotion": "smug", "move": "hands_on_hips" } ] },
-              { "id": "sorry", "style": "timid", "score": 0, "match": ["sorry", "maaf", "galti", "mistake", "please", "maafi"], "effects": { "power": -1 },
-                "reaction": [ { "say": "tanvi", "text": "सॉरी से ड्रेस साफ़ नहीं होती।", "emotion": "disgusted", "move": "shake_head" }, { "audience": "laugh" } ] },
-              { "id": "attitude", "style": "confident", "score": 8, "match": ["dhakka", "tumne", "dekh ke", "dekhkar", "tameez", "andhi", "tum andhi", "khud", "your fault", "galti tumhari"], "effects": { "power": 3, "trust": 1 },
-                "reaction": [ { "say": "tanvi", "text": "ओहो… ज़ुबान भी है? दिलचस्प।", "emotion": "surprised", "move": "step_back" }, { "audience": "gasp" } ] }
+            "choices": [
+              "Mera naam yaad rakhna",
+              "Sorry, galti ho gayi",
+              "Dhakka tumne diya tha"
             ],
-            "fallback": { "say": "कुछ बोलना भी है, या बस घूरना है?", "char": "tanvi", "emotion": "bored", "effects": { "power": -1 } }
-        } },
-        { "say": "sahil", "text": "चल तन्वी, इसकी औकात नहीं है हमारे लेवल की।", "emotion": "smug", "move": "laugh" }
+            "intents": [
+              {
+                "id": "name",
+                "style": "confident",
+                "score": 6,
+                "match": [
+                  "naam",
+                  "mera naam",
+                  "yaad rakhna",
+                  "main hoon",
+                  "hu",
+                  "hoon",
+                  "call me",
+                  "my name"
+                ],
+                "effects": {
+                  "power": 2
+                },
+                "reaction": [
+                  {
+                    "say": "tanvi",
+                    "text": "हम्म। नाम तो याद रहेगा… देखते हैं कब तक।",
+                    "emotion": "smug",
+                    "move": "hands_on_hips",
+                    "voice_file": "audio/tanvi_0cae376e26f2.ogg"
+                  }
+                ]
+              },
+              {
+                "id": "sorry",
+                "style": "timid",
+                "score": 0,
+                "match": [
+                  "sorry",
+                  "maaf",
+                  "galti",
+                  "mistake",
+                  "please",
+                  "maafi"
+                ],
+                "effects": {
+                  "power": -1
+                },
+                "reaction": [
+                  {
+                    "say": "tanvi",
+                    "text": "सॉरी से ड्रेस साफ़ नहीं होती।",
+                    "emotion": "disgusted",
+                    "move": "shake_head",
+                    "voice_file": "audio/tanvi_ca1abe9e21f4.ogg"
+                  },
+                  {
+                    "audience": "laugh"
+                  }
+                ]
+              },
+              {
+                "id": "attitude",
+                "style": "confident",
+                "score": 8,
+                "match": [
+                  "dhakka",
+                  "tumne",
+                  "dekh ke",
+                  "dekhkar",
+                  "tameez",
+                  "andhi",
+                  "tum andhi",
+                  "khud",
+                  "your fault",
+                  "galti tumhari"
+                ],
+                "effects": {
+                  "power": 3,
+                  "trust": 1
+                },
+                "reaction": [
+                  {
+                    "say": "tanvi",
+                    "text": "ओहो… ज़ुबान भी है? दिलचस्प।",
+                    "emotion": "surprised",
+                    "move": "step_back",
+                    "voice_file": "audio/tanvi_b2cf3b9bbcaa.ogg"
+                  },
+                  {
+                    "audience": "gasp"
+                  }
+                ]
+              }
+            ],
+            "fallback": {
+              "say": "कुछ बोलना भी है, या बस घूरना है?",
+              "char": "tanvi",
+              "emotion": "bored",
+              "effects": {
+                "power": -1
+              },
+              "voice_file": "audio/tanvi_4d4c2f4621df.ogg"
+            }
+          }
+        },
+        {
+          "say": "sahil",
+          "text": "चल तन्वी, इसकी औकात नहीं है हमारे लेवल की।",
+          "emotion": "smug",
+          "move": "laugh",
+          "voice_file": "audio/sahil_8567447aa0dd.ogg"
+        }
       ],
       "prompt": "Sab dekh rahe hain. Tum kya karte ho?",
       "choice": [
-        { "text": "S-sorry… galti ho gayi 😬", "style": "timid", "score": 0, "effects": { "power": -2 }, "goto": "s2_dismissed",
-          "reaction": [ { "say": "tanvi", "text": "हाँ, गलती तो हुई है। अगली बार रास्ते से हटकर चलना।", "emotion": "smug", "move": "walk_away" }, { "audience": "laugh" }, { "exit": "tanvi", "to": "right" }, { "exit": "sahil", "to": "right" } ] },
-        { "text": "Naam yaad rakhna — {player}. Aur dhakka tumne diya tha 😎", "style": "confident", "score": 12, "effects": { "power": 3, "trust": 1, "stood_up": true }, "goto": "s2_bold",
-          "reaction": [ { "emote": "tanvi", "emotion": "shocked" }, { "say": "tanvi", "text": "…ठीक है, {player}। ये नाम याद रहेगा।", "emotion": "smug", "move": "turn" }, { "audience": "gasp" }, { "exit": "tanvi", "to": "right" } ] },
-        { "text": "Dry cleaning ka bill bhej dena, madam 😏", "style": "funny", "score": 6, "effects": { "power": 2 }, "goto": "s2_bold",
-          "reaction": [ { "say": "tanvi", "text": "बहुत मज़ाकिया हो? देखते हैं कब तक हँसी आती है।", "emotion": "angry", "move": "walk_away" }, { "audience": "laugh" }, { "exit": "tanvi", "to": "right" } ] },
-        { "text": "(Chup-chaap kitaabein uthao)", "style": "timid", "score": 1, "effects": { "dosti": 1, "power": -1 }, "goto": "s2_dismissed", "kind": "action",
-          "reaction": [ { "say": "sahil", "text": "देखा? बोलती बंद।", "emotion": "laugh", "move": "point" }, { "exit": "tanvi", "to": "right" }, { "exit": "sahil", "to": "right" } ] }
+        {
+          "text": "S-sorry… galti ho gayi 😬",
+          "style": "timid",
+          "score": 0,
+          "effects": {
+            "power": -2
+          },
+          "goto": "s2_dismissed",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "हाँ, गलती तो हुई है। अगली बार रास्ते से हटकर चलना।",
+              "emotion": "smug",
+              "move": "walk_away",
+              "voice_file": "audio/tanvi_67a4b4774757.ogg"
+            },
+            {
+              "audience": "laugh"
+            },
+            {
+              "exit": "tanvi",
+              "to": "right"
+            },
+            {
+              "exit": "sahil",
+              "to": "right"
+            }
+          ]
+        },
+        {
+          "text": "Naam yaad rakhna — {player}. Aur dhakka tumne diya tha 😎",
+          "style": "confident",
+          "score": 12,
+          "effects": {
+            "power": 3,
+            "trust": 1,
+            "stood_up": true
+          },
+          "goto": "s2_bold",
+          "reaction": [
+            {
+              "emote": "tanvi",
+              "emotion": "shocked"
+            },
+            {
+              "say": "tanvi",
+              "text": "…ठीक है, {player}। ये नाम याद रहेगा।",
+              "emotion": "smug",
+              "move": "turn"
+            },
+            {
+              "audience": "gasp"
+            },
+            {
+              "exit": "tanvi",
+              "to": "right"
+            }
+          ]
+        },
+        {
+          "text": "Dry cleaning ka bill bhej dena, madam 😏",
+          "style": "funny",
+          "score": 6,
+          "effects": {
+            "power": 2
+          },
+          "goto": "s2_bold",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "बहुत मज़ाकिया हो? देखते हैं कब तक हँसी आती है।",
+              "emotion": "angry",
+              "move": "walk_away",
+              "voice_file": "audio/tanvi_221e773f0289.ogg"
+            },
+            {
+              "audience": "laugh"
+            },
+            {
+              "exit": "tanvi",
+              "to": "right"
+            }
+          ]
+        },
+        {
+          "text": "(Chup-chaap kitaabein uthao)",
+          "style": "timid",
+          "score": 1,
+          "effects": {
+            "dosti": 1,
+            "power": -1
+          },
+          "goto": "s2_dismissed",
+          "kind": "action",
+          "reaction": [
+            {
+              "say": "sahil",
+              "text": "देखा? बोलती बंद।",
+              "emotion": "laugh",
+              "move": "point",
+              "voice_file": "audio/sahil_a2b548891345.ogg"
+            },
+            {
+              "exit": "tanvi",
+              "to": "right"
+            },
+            {
+              "exit": "sahil",
+              "to": "right"
+            }
+          ]
+        }
       ]
     },
-
     "s2_dismissed": {
-      "title": "Uthao Kitaabein", "background": "college_corridor", "time": "day", "music": "sad_piano",
-      "cast": [ { "id": "meher", "at": 0.65 } ], "audience": 3,
+      "title": "Uthao Kitaabein",
+      "background": "college_corridor",
+      "time": "day",
+      "music": "sad_piano",
+      "cast": [
+        {
+          "id": "meher",
+          "at": 0.65
+        }
+      ],
+      "audience": 3,
       "steps": [
-        { "narrate": "हँसी धीरे-धीरे दूर चली जाती है। ज़मीन पर बिखरी किताबें, और एक हाथ जो उन्हें उठाने झुकता है।" },
-        { "enter": "meher", "at": 0.62, "from": "left" },
-        { "say": "meher", "text": "रुको, मैं मदद करती हूँ।", "emotion": "worried", "move": "kneel" },
-        { "say": "meher", "text": "मैं मेहर। तन्वी की बातें दिल पे मत लेना, वो सबके साथ ऐसा करती है।", "emotion": "smile", "move": "idle" },
-        { "say": "meher", "text": "वैसे… आज सुबह उसकी साहिल से बड़ी लड़ाई हुई थी। कुछ तो गड़बड़ है।", "emotion": "thinking", "move": "look_down" }
+        {
+          "narrate": "हँसी धीरे-धीरे दूर चली जाती है। ज़मीन पर बिखरी किताबें, और एक हाथ जो उन्हें उठाने झुकता है।",
+          "voice_file": "audio/narrator_5ba5001ed591.ogg"
+        },
+        {
+          "enter": "meher",
+          "at": 0.62,
+          "from": "left"
+        },
+        {
+          "say": "meher",
+          "text": "रुको, मैं मदद करती हूँ।",
+          "emotion": "worried",
+          "move": "kneel",
+          "voice_file": "audio/meher_2e5a3a45fc06.ogg"
+        },
+        {
+          "say": "meher",
+          "text": "मैं मेहर। तन्वी की बातें दिल पे मत लेना, वो सबके साथ ऐसा करती है।",
+          "emotion": "smile",
+          "move": "idle",
+          "voice_file": "audio/meher_ae1156f14da7.ogg"
+        },
+        {
+          "say": "meher",
+          "text": "वैसे… आज सुबह उसकी साहिल से बड़ी लड़ाई हुई थी। कुछ तो गड़बड़ है।",
+          "emotion": "thinking",
+          "move": "look_down",
+          "voice_file": "audio/meher_58db000b9d96.ogg"
+        }
       ],
       "choice": [
-        { "text": "Thanks Meher. Tum pehli insaan ho jo aaj achhe se mili ho 🙂", "style": "kind", "score": 4, "effects": { "dosti": 3 }, "goto": "s3_class",
-          "reaction": [ { "say": "meher", "text": "अरे, इसमें क्या। चलो, क्लास के लिए देर हो रही है।", "emotion": "blushing", "move": "nod" } ] },
-        { "text": "Mujhe kisi ki help nahi chahiye.", "style": "cold", "score": 2, "effects": { "dosti": -2, "power": 1 }, "goto": "s3_class",
-          "reaction": [ { "say": "meher", "text": "ठीक है… जैसी तुम्हारी मर्ज़ी।", "emotion": "sad", "move": "step_back" } ] }
+        {
+          "text": "Thanks Meher. Tum pehli insaan ho jo aaj achhe se mili ho 🙂",
+          "style": "kind",
+          "score": 4,
+          "effects": {
+            "dosti": 3
+          },
+          "goto": "s3_class",
+          "reaction": [
+            {
+              "say": "meher",
+              "text": "अरे, इसमें क्या। चलो, क्लास के लिए देर हो रही है।",
+              "emotion": "blushing",
+              "move": "nod",
+              "voice_file": "audio/meher_6b6faa7b7316.ogg"
+            }
+          ]
+        },
+        {
+          "text": "Mujhe kisi ki help nahi chahiye.",
+          "style": "cold",
+          "score": 2,
+          "effects": {
+            "dosti": -2,
+            "power": 1
+          },
+          "goto": "s3_class",
+          "reaction": [
+            {
+              "say": "meher",
+              "text": "ठीक है… जैसी तुम्हारी मर्ज़ी।",
+              "emotion": "sad",
+              "move": "step_back",
+              "voice_file": "audio/meher_8bef004aa193.ogg"
+            }
+          ]
+        }
       ]
     },
-
     "s2_bold": {
-      "title": "Seedha Saamna", "type": "pov", "background": "college_corridor", "time": "day", "music": "tension",
-      "cast": [ { "id": "sahil", "at": 0.5 } ], "audience": 8,
+      "title": "Seedha Saamna",
+      "type": "pov",
+      "background": "college_corridor",
+      "time": "day",
+      "music": "tension",
+      "cast": [
+        {
+          "id": "sahil",
+          "at": 0.5
+        }
+      ],
+      "audience": 8,
       "steps": [
-        { "narrate": "तन्वी जा चुकी है। पर साहिल सीधा तुम्हारे सामने आ खड़ा होता है।" },
-        { "camera": { "zoom": 1.25, "focus": "sahil" } },
-        { "say": "sahil", "text": "बड़ा हीरो बनने का शौक है? सबके सामने तन्वी से ऐसे बात?", "emotion": "angry", "move": "point" },
-        { "say": "sahil", "text": "यहाँ हर कोई अपनी औकात में रहता है। तुम्हारी औकात मैं तय करूँगा।", "emotion": "smug", "move": "hands_on_hips" },
-        { "audience": "murmur" }
+        {
+          "narrate": "तन्वी जा चुकी है। पर साहिल सीधा तुम्हारे सामने आ खड़ा होता है।",
+          "voice_file": "audio/narrator_d0a25d7e776f.ogg"
+        },
+        {
+          "camera": {
+            "zoom": 1.25,
+            "focus": "sahil"
+          }
+        },
+        {
+          "say": "sahil",
+          "text": "बड़ा हीरो बनने का शौक है? सबके सामने तन्वी से ऐसे बात?",
+          "emotion": "angry",
+          "move": "point",
+          "voice_file": "audio/sahil_449ec8e4fe20.ogg"
+        },
+        {
+          "say": "sahil",
+          "text": "यहाँ हर कोई अपनी औकात में रहता है। तुम्हारी औकात मैं तय करूँगा।",
+          "emotion": "smug",
+          "move": "hands_on_hips",
+          "voice_file": "audio/sahil_d6de67e49fcb.ogg"
+        },
+        {
+          "audience": "murmur"
+        }
       ],
       "prompt": "Sahil tumhare chehre ke bilkul paas hai…",
       "choice": [
-        { "text": "Peeche hato, Sahil. Meri aukaat main khud tay {m:karta|f:karti} hoon 🔥", "style": "confident", "score": 10, "effects": { "power": 3, "stood_up": true }, "goto": "s3_class",
-          "reaction": [ { "say": "sahil", "text": "…चल, देख लेंगे।", "emotion": "shocked", "move": "step_back" }, { "audience": "gasp" } ] },
-        { "text": "Main bas class {m:dhoondh raha tha|f:dhoondh rahi thi}…", "style": "timid", "score": 0, "effects": { "power": -2 }, "goto": "s3_class",
-          "reaction": [ { "say": "sahil", "text": "हाँ, वही ढूँढो। और रास्ते से हटकर।", "emotion": "laugh", "move": "laugh" }, { "audience": "laugh" } ] }
+        {
+          "text": "Peeche hato, Sahil. Meri aukaat main khud tay {m:karta|f:karti} hoon 🔥",
+          "style": "confident",
+          "score": 10,
+          "effects": {
+            "power": 3,
+            "stood_up": true
+          },
+          "goto": "s3_class",
+          "reaction": [
+            {
+              "say": "sahil",
+              "text": "…चल, देख लेंगे।",
+              "emotion": "shocked",
+              "move": "step_back",
+              "voice_file": "audio/sahil_b4c3733087a7.ogg"
+            },
+            {
+              "audience": "gasp"
+            }
+          ]
+        },
+        {
+          "text": "Main bas class {m:dhoondh raha tha|f:dhoondh rahi thi}…",
+          "style": "timid",
+          "score": 0,
+          "effects": {
+            "power": -2
+          },
+          "goto": "s3_class",
+          "reaction": [
+            {
+              "say": "sahil",
+              "text": "हाँ, वही ढूँढो। और रास्ते से हटकर।",
+              "emotion": "laugh",
+              "move": "laugh",
+              "voice_file": "audio/sahil_e3c16bb6f25b.ogg"
+            },
+            {
+              "audience": "laugh"
+            }
+          ]
+        }
       ]
     },
-
     "s3_class": {
-      "title": "Challenge", "checkpoint": "Class mein challenge", "background": "classroom", "time": "day", "music": "calm_campus",
-      "cast": [ { "id": "tanvi", "at": 0.62 }, { "id": "meher", "at": 0.85 } ], "audience": 5,
+      "title": "Challenge",
+      "checkpoint": "Class mein challenge",
+      "background": "classroom",
+      "time": "day",
+      "music": "calm_campus",
+      "cast": [
+        {
+          "id": "tanvi",
+          "at": 0.62
+        },
+        {
+          "id": "meher",
+          "at": 0.85
+        }
+      ],
+      "audience": 5,
       "steps": [
-        { "set": { "complete_objective": "o1" } },
-        { "narrate": "क्लासरूम। प्रोफ़ेसर अभी तक नहीं आए। तन्वी तुम्हारी बेंच की तरफ़ मुड़ती है।" },
-        { "if": "power >= 5",
+        {
+          "set": {
+            "complete_objective": "o1"
+          }
+        },
+        {
+          "narrate": "क्लासरूम। प्रोफ़ेसर अभी तक नहीं आए। तन्वी तुम्हारी बेंच की तरफ़ मुड़ती है।",
+          "voice_file": "audio/narrator_b9b5128afd78.ogg"
+        },
+        {
+          "if": "power >= 5",
           "then": [
-            { "say": "tanvi", "text": "सुबह वाली हिम्मत अच्छी थी। पर कॉरिडोर में बोलना आसान है।", "emotion": "smug", "move": "cross_arms" },
-            { "say": "tanvi", "text": "कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ। अगर सच में दम है, तो आ जाना।", "emotion": "determined", "move": "point" }
+            {
+              "say": "tanvi",
+              "text": "सुबह वाली हिम्मत अच्छी थी। पर कॉरिडोर में बोलना आसान है।",
+              "emotion": "smug",
+              "move": "cross_arms",
+              "voice_file": "audio/tanvi_4099c5bbdec9.ogg"
+            },
+            {
+              "say": "tanvi",
+              "text": "कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ। अगर सच में दम है, तो आ जाना।",
+              "emotion": "determined",
+              "move": "point",
+              "voice_file": "audio/tanvi_e27d199243d3.ogg"
+            }
           ],
           "else": [
-            { "say": "tanvi", "text": "तुम? अभी तक कॉलेज छोड़ा नहीं?", "emotion": "bored", "move": "idle" },
-            { "say": "tanvi", "text": "चलो, एक मौका देती हूँ। कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ। डरपोक हो या नहीं, पता चल जाएगा।", "emotion": "smug", "move": "point" }
-          ] },
-        { "say": "meher", "text": "धीरे से: मत जाना… या जाना। पर सोच-समझकर।", "emotion": "worried", "move": "look_down" }
+            {
+              "say": "tanvi",
+              "text": "तुम? अभी तक कॉलेज छोड़ा नहीं?",
+              "emotion": "bored",
+              "move": "idle",
+              "voice_file": "audio/tanvi_95fc45554551.ogg"
+            },
+            {
+              "say": "tanvi",
+              "text": "चलो, एक मौका देती हूँ। कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ। डरपोक हो या नहीं, पता चल जाएगा।",
+              "emotion": "smug",
+              "move": "point",
+              "voice_file": "audio/tanvi_8e5c44a6f1ef.ogg"
+            }
+          ]
+        },
+        {
+          "say": "meher",
+          "text": "धीरे से: मत जाना… या जाना। पर सोच-समझकर।",
+          "emotion": "worried",
+          "move": "look_down",
+          "voice_file": "audio/meher_4f4e75d3c499.ogg"
+        }
       ],
       "prompt": "Tanvi ka challenge: kal shaam 5 baje, library ki seedhiyan.",
       "choice": [
-        { "text": "Challenge accept 🔥 Kal 5 baje milte hain.", "style": "confident", "score": 8, "effects": { "start_objective": "o2", "power": 1 }, "goto": "s4_steps",
-          "reaction": [ { "say": "tanvi", "text": "देखते हैं।", "emotion": "smile", "move": "turn" } ] },
-        { "text": "Tumhare games mein mera koi interest nahi 🙄", "style": "cold", "score": 4, "effects": { "decline_objective": "o2", "trust": -2, "power": 1 }, "goto": "s4_canteen",
-          "reaction": [ { "say": "tanvi", "text": "जैसी मर्ज़ी। वैसे भी उम्मीद नहीं थी।", "emotion": "disgusted", "move": "shrug" } ] }
+        {
+          "text": "Challenge accept 🔥 Kal 5 baje milte hain.",
+          "style": "confident",
+          "score": 8,
+          "effects": {
+            "start_objective": "o2",
+            "power": 1
+          },
+          "goto": "s4_steps",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "देखते हैं।",
+              "emotion": "smile",
+              "move": "turn",
+              "voice_file": "audio/tanvi_a3d9e5b4b58a.ogg"
+            }
+          ]
+        },
+        {
+          "text": "Tumhare games mein mera koi interest nahi 🙄",
+          "style": "cold",
+          "score": 4,
+          "effects": {
+            "decline_objective": "o2",
+            "trust": -2,
+            "power": 1
+          },
+          "goto": "s4_canteen",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "जैसी मर्ज़ी। वैसे भी उम्मीद नहीं थी।",
+              "emotion": "disgusted",
+              "move": "shrug",
+              "voice_file": "audio/tanvi_629819070245.ogg"
+            }
+          ]
+        }
       ]
     },
-
     "s4_steps": {
-      "title": "Library ki Seedhiyan", "checkpoint": "Library ki seedhiyan", "background": "library", "time": "dusk", "music": "romance",
-      "cast": [ { "id": "tanvi", "at": 0.6 } ], "audience": 0,
+      "title": "Library ki Seedhiyan",
+      "checkpoint": "Library ki seedhiyan",
+      "background": "library",
+      "time": "dusk",
+      "music": "romance",
+      "cast": [
+        {
+          "id": "tanvi",
+          "at": 0.6
+        }
+      ],
+      "audience": 0,
       "steps": [
-        { "set": { "complete_objective": "o2" } },
-        { "narrate": "अगली शाम, ठीक पाँच बजे। सीढ़ियों पर तन्वी अकेली बैठी है — आज कोई भीड़ नहीं, कोई साहिल नहीं।" },
-        { "say": "tanvi", "text": "तो… सच में कोई आया। मुझे लगा था ये सीढ़ियाँ आज भी ख़ाली रहेंगी।", "emotion": "surprised", "move": "sit" },
-        { "say": "tanvi", "text": "सच बताऊँ? ये कोई चैलेंज नहीं था। मुझे बस देखना था कि कोई मेरे सामने टिक सकता है या नहीं।", "emotion": "sad", "move": "look_down" },
-        { "say": "tanvi", "text": "कल जो हुआ… वो मैं नहीं थी। मतलब, थी… पर उस दिन मेरा दिमाग़ कहीं और था।", "emotion": "worried", "move": "idle" }
+        {
+          "set": {
+            "complete_objective": "o2"
+          }
+        },
+        {
+          "narrate": "अगली शाम, ठीक पाँच बजे। सीढ़ियों पर तन्वी अकेली बैठी है — आज कोई भीड़ नहीं, कोई साहिल नहीं।",
+          "voice_file": "audio/narrator_deae10d17516.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "तो… सच में कोई आया। मुझे लगा था ये सीढ़ियाँ आज भी ख़ाली रहेंगी।",
+          "emotion": "surprised",
+          "move": "sit",
+          "voice_file": "audio/tanvi_fe8d95b85fb6.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "सच बताऊँ? ये कोई चैलेंज नहीं था। मुझे बस देखना था कि कोई मेरे सामने टिक सकता है या नहीं।",
+          "emotion": "sad",
+          "move": "look_down",
+          "voice_file": "audio/tanvi_555fff5fbdd5.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "कल जो हुआ… वो मैं नहीं थी। मतलब, थी… पर उस दिन मेरा दिमाग़ कहीं और था।",
+          "emotion": "worried",
+          "move": "idle",
+          "voice_file": "audio/tanvi_0c68d3b9abc7.ogg"
+        }
       ],
       "prompt": "Tanvi pehli baar naram lag rahi hai.",
       "choice": [
-        { "text": "Kya hua tha? Tum bata sakti ho.", "style": "kind", "score": 8, "effects": { "trust": 3 }, "goto": "s5_chat",
-          "reaction": [ { "say": "tanvi", "text": "शायद… किसी दिन। आज नहीं।", "emotion": "shy", "move": "look_down" }, { "say": "tanvi", "text": "थैंक्स। सच में।", "emotion": "smile", "move": "nod" } ] },
-        { "text": "Kal sabke saamne mazaak banaya, aaj sorry? Wah.", "style": "cold", "score": 5, "effects": { "trust": -2, "power": 2 }, "goto": "s5_chat",
-          "reaction": [ { "say": "tanvi", "text": "हाँ… ठीक कहा। मैं यही डिज़र्व करती हूँ।", "emotion": "sad", "move": "turn" }, { "exit": "tanvi", "to": "left" } ] }
+        {
+          "text": "Kya hua tha? Tum bata sakti ho.",
+          "style": "kind",
+          "score": 8,
+          "effects": {
+            "trust": 3
+          },
+          "goto": "s5_chat",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "शायद… किसी दिन। आज नहीं।",
+              "emotion": "shy",
+              "move": "look_down",
+              "voice_file": "audio/tanvi_dc453c8129c6.ogg"
+            },
+            {
+              "say": "tanvi",
+              "text": "थैंक्स। सच में।",
+              "emotion": "smile",
+              "move": "nod",
+              "voice_file": "audio/tanvi_773243603428.ogg"
+            }
+          ]
+        },
+        {
+          "text": "Kal sabke saamne mazaak banaya, aaj sorry? Wah.",
+          "style": "cold",
+          "score": 5,
+          "effects": {
+            "trust": -2,
+            "power": 2
+          },
+          "goto": "s5_chat",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "हाँ… ठीक कहा। मैं यही डिज़र्व करती हूँ।",
+              "emotion": "sad",
+              "move": "turn",
+              "voice_file": "audio/tanvi_ae36e1f272f9.ogg"
+            },
+            {
+              "exit": "tanvi",
+              "to": "left"
+            }
+          ]
+        }
       ]
     },
-
     "s4_canteen": {
-      "title": "Canteen", "background": "cafe", "time": "day", "music": "upbeat",
-      "cast": [ { "id": "meher", "at": 0.62 } ], "audience": 6,
+      "title": "Canteen",
+      "background": "cafe",
+      "time": "day",
+      "music": "upbeat",
+      "cast": [
+        {
+          "id": "meher",
+          "at": 0.62
+        }
+      ],
+      "audience": 6,
       "steps": [
-        { "narrate": "अगली शाम पाँच बजे तुम लाइब्रेरी नहीं, कैंटीन में हो। सामने मेहर, दो कटिंग चाय के साथ।" },
-        { "prop": "chai_glass", "char": "meher", "anchor": "hand_r" },
-        { "say": "meher", "text": "अच्छा फ़ैसला। तन्वी के खेल में सब हारते हैं।", "emotion": "smile", "move": "idle" },
-        { "say": "meher", "text": "पर पता है? आज वो लाइब्रेरी की सीढ़ियों पर अकेली बैठी थी। रो रही थी शायद।", "emotion": "worried", "move": "look_down" }
+        {
+          "narrate": "अगली शाम पाँच बजे तुम लाइब्रेरी नहीं, कैंटीन में हो। सामने मेहर, दो कटिंग चाय के साथ।",
+          "voice_file": "audio/narrator_dfe01b6b4a6b.ogg"
+        },
+        {
+          "prop": "chai_glass",
+          "char": "meher",
+          "anchor": "hand_r"
+        },
+        {
+          "say": "meher",
+          "text": "अच्छा फ़ैसला। तन्वी के खेल में सब हारते हैं।",
+          "emotion": "smile",
+          "move": "idle",
+          "voice_file": "audio/meher_be0fe935a61e.ogg"
+        },
+        {
+          "say": "meher",
+          "text": "पर पता है? आज वो लाइब्रेरी की सीढ़ियों पर अकेली बैठी थी। रो रही थी शायद।",
+          "emotion": "worried",
+          "move": "look_down",
+          "voice_file": "audio/meher_533d6004f677.ogg"
+        }
       ],
       "prompt": "Meher tumhari taraf dekh rahi hai.",
       "choice": [
-        { "text": "Chai pe charcha, Tanvi pe nahi 😄 Tum batao, topper kaise bante hain?", "style": "funny", "score": 5, "effects": { "dosti": 3 }, "goto": "s5_chat",
-          "reaction": [ { "say": "meher", "text": "हाहा! पहला नियम: तन्वी जैसे लोगों से दूर रहो।", "emotion": "laugh", "move": "laugh" } ] },
-        { "text": "Ro rahi thi? Shayad kuch serious hai…", "style": "kind", "score": 4, "effects": { "dosti": 1, "trust": 1 }, "goto": "s5_chat",
-          "reaction": [ { "say": "meher", "text": "तुम सच में अजीब हो। जिसने बेइज़्ज़ती की, उसी की फ़िक्र?", "emotion": "surprised", "move": "shrug" } ] }
+        {
+          "text": "Chai pe charcha, Tanvi pe nahi 😄 Tum batao, topper kaise bante hain?",
+          "style": "funny",
+          "score": 5,
+          "effects": {
+            "dosti": 3
+          },
+          "goto": "s5_chat",
+          "reaction": [
+            {
+              "say": "meher",
+              "text": "हाहा! पहला नियम: तन्वी जैसे लोगों से दूर रहो।",
+              "emotion": "laugh",
+              "move": "laugh",
+              "voice_file": "audio/meher_73c5c5f9f04e.ogg"
+            }
+          ]
+        },
+        {
+          "text": "Ro rahi thi? Shayad kuch serious hai…",
+          "style": "kind",
+          "score": 4,
+          "effects": {
+            "dosti": 1,
+            "trust": 1
+          },
+          "goto": "s5_chat",
+          "reaction": [
+            {
+              "say": "meher",
+              "text": "तुम सच में अजीब हो। जिसने बेइज़्ज़ती की, उसी की फ़िक्र?",
+              "emotion": "surprised",
+              "move": "shrug",
+              "voice_file": "audio/meher_fcaa946ce20e.ogg"
+            }
+          ]
+        }
       ]
     },
-
     "s5_chat": {
-      "title": "1:03 AM", "type": "chat", "with": "tanvi", "header": "Tanvi Oberoi", "checkpoint": "1:03 AM ka message", "time": "night", "music": "night_city",
+      "title": "1:03 AM",
+      "type": "chat",
+      "with": "tanvi",
+      "header": "Tanvi Oberoi",
+      "checkpoint": "1:03 AM ka message",
+      "time": "night",
+      "music": "night_city",
       "steps": [
-        { "narrate": "रात के 1:03 बजे। फ़ोन की स्क्रीन जलती है।" },
-        { "say": "tanvi", "text": "ऑनलाइन हो?", "time": "1:03 AM", "delay": 1400, "emotion": "worried" },
-        { "say": "tanvi", "text": "मुझे पता है मैंने बहुत बुरा किया।", "time": "1:03 AM", "delay": 1800, "emotion": "sad" },
-        { "say": "tanvi", "text": "पर मुझे तुम्हारी मदद चाहिए। प्लीज़। और किसी पे भरोसा नहीं है।", "time": "1:04 AM", "delay": 2200, "emotion": "crying" },
-        { "open_reply": {
+        {
+          "narrate": "रात के 1:03 बजे। फ़ोन की स्क्रीन जलती है।",
+          "voice_file": "audio/narrator_28a110796f48.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "ऑनलाइन हो?",
+          "time": "1:03 AM",
+          "delay": 1400,
+          "emotion": "worried",
+          "voice_file": "audio/tanvi_e78f4783c552.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "मुझे पता है मैंने बहुत बुरा किया।",
+          "time": "1:03 AM",
+          "delay": 1800,
+          "emotion": "sad",
+          "voice_file": "audio/tanvi_02990cbf5f55.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "पर मुझे तुम्हारी मदद चाहिए। प्लीज़। और किसी पे भरोसा नहीं है।",
+          "time": "1:04 AM",
+          "delay": 2200,
+          "emotion": "crying",
+          "voice_file": "audio/tanvi_b743f728312f.ogg"
+        },
+        {
+          "open_reply": {
             "char": "tanvi",
             "prompt": "Tanvi ko reply karo",
             "placeholder": "Message likho…",
-            "choices": ["Kya hua? Batao", "Ab yaad aayi meri?"],
-            "intents": [
-              { "id": "help", "style": "kind", "score": 8, "match": ["kya hua", "batao", "bolo", "madad", "haan", "theek", "okay", "sab theek", "main hoon", "bata", "tell me", "what happened", "kaise"], "effects": { "trust": 4, "helped_tanvi": true }, "goto": "s6_help" },
-              { "id": "cold", "style": "cold", "score": 5, "match": ["ab yaad", "yaad aayi", "aukaat", "badla", "nahi", "kyun", "bezzati", "mazaak", "tumhari problem", "go away", "bhaad"], "effects": { "power": 2, "trust": -2 }, "goto": "s6_cold" }
+            "choices": [
+              "Kya hua? Batao",
+              "Ab yaad aayi meri?"
             ],
-            "fallback": { "say": "सीन करके छोड़ देना… वाह। ठीक है।", "char": "tanvi", "emotion": "sad", "effects": { "trust": -1 } }
-        } },
-        { "say": "tanvi", "text": "एक बार… बस एक बार बात तो कर लो।", "time": "1:06 AM", "delay": 1600, "emotion": "crying" }
+            "intents": [
+              {
+                "id": "help",
+                "style": "kind",
+                "score": 8,
+                "match": [
+                  "kya hua",
+                  "batao",
+                  "bolo",
+                  "madad",
+                  "haan",
+                  "theek",
+                  "okay",
+                  "sab theek",
+                  "main hoon",
+                  "bata",
+                  "tell me",
+                  "what happened",
+                  "kaise"
+                ],
+                "effects": {
+                  "trust": 4,
+                  "helped_tanvi": true
+                },
+                "goto": "s6_help"
+              },
+              {
+                "id": "cold",
+                "style": "cold",
+                "score": 5,
+                "match": [
+                  "ab yaad",
+                  "yaad aayi",
+                  "aukaat",
+                  "badla",
+                  "nahi",
+                  "kyun",
+                  "bezzati",
+                  "mazaak",
+                  "tumhari problem",
+                  "go away",
+                  "bhaad"
+                ],
+                "effects": {
+                  "power": 2,
+                  "trust": -2
+                },
+                "goto": "s6_cold"
+              }
+            ],
+            "fallback": {
+              "say": "सीन करके छोड़ देना… वाह। ठीक है।",
+              "char": "tanvi",
+              "emotion": "sad",
+              "effects": {
+                "trust": -1
+              },
+              "voice_file": "audio/tanvi_227631870a76.ogg"
+            }
+          }
+        },
+        {
+          "say": "tanvi",
+          "text": "एक बार… बस एक बार बात तो कर लो।",
+          "time": "1:06 AM",
+          "delay": 1600,
+          "emotion": "crying",
+          "voice_file": "audio/tanvi_73ffb2b3cc6e.ogg"
+        }
       ],
       "prompt": "Tanvi typing… ruk gayi. Ab tum?",
       "choice": [
-        { "text": "Kya hua? Batao, main {m:sun raha|f:sun rahi} hoon.", "style": "kind", "score": 8, "effects": { "trust": 4, "helped_tanvi": true }, "goto": "s6_help" },
-        { "text": "Ab yaad aayi meri? Kal toh aukaat dikha rahi thi.", "style": "cold", "score": 5, "effects": { "power": 2, "trust": -2 }, "goto": "s6_cold" },
-        { "text": "(Ignore karo — phone ulta rakh do)", "style": "cold", "score": 2, "kind": "ignore", "effects": { "trust": -3 }, "goto": "s6_ignored" },
-        { "text": "(Block kar do)", "style": "rude", "score": 3, "kind": "block", "effects": { "trust": -6, "power": 2, "blocked_tanvi": true }, "goto": "s6_blocked" }
+        {
+          "text": "Kya hua? Batao, main {m:sun raha|f:sun rahi} hoon.",
+          "style": "kind",
+          "score": 8,
+          "effects": {
+            "trust": 4,
+            "helped_tanvi": true
+          },
+          "goto": "s6_help"
+        },
+        {
+          "text": "Ab yaad aayi meri? Kal toh aukaat dikha rahi thi.",
+          "style": "cold",
+          "score": 5,
+          "effects": {
+            "power": 2,
+            "trust": -2
+          },
+          "goto": "s6_cold"
+        },
+        {
+          "text": "(Ignore karo — phone ulta rakh do)",
+          "style": "cold",
+          "score": 2,
+          "kind": "ignore",
+          "effects": {
+            "trust": -3
+          },
+          "goto": "s6_ignored"
+        },
+        {
+          "text": "(Block kar do)",
+          "style": "rude",
+          "score": 3,
+          "kind": "block",
+          "effects": {
+            "trust": -6,
+            "power": 2,
+            "blocked_tanvi": true
+          },
+          "goto": "s6_blocked"
+        }
       ]
     },
-
     "s6_help": {
-      "type": "chat", "with": "tanvi", "header": "Tanvi Oberoi", "time": "night", "music": "night_city",
+      "type": "chat",
+      "with": "tanvi",
+      "header": "Tanvi Oberoi",
+      "time": "night",
+      "music": "night_city",
       "steps": [
-        { "say": "tanvi", "text": "साहिल के पास मेरा एक वीडियो है। उस दिन का, जब पापा से लड़ाई के बाद मैं कैंटीन के पीछे रो रही थी।", "time": "1:08 AM", "delay": 2400, "emotion": "crying" },
-        { "say": "tanvi", "text": "वो कहता है कल लंच में कॉलेज ग्रुप पर डाल देगा, अगर मैंने उसकी बात नहीं मानी।", "time": "1:08 AM", "delay": 2000, "emotion": "scared" },
-        { "say": "tanvi", "text": "वो हमेशा कैंटीन में शेखी बघारता है। अगर कोई उसकी धमकी रिकॉर्ड कर ले… तो सबको सच पता चल जाएगा।", "time": "1:09 AM", "delay": 2200, "emotion": "thinking" },
-        { "say": "tanvi", "text": "कल लंच ब्रेक, कैंटीन। मुझे तुम्हारा साथ चाहिए… प्लीज़।", "time": "1:10 AM", "delay": 1800, "emotion": "worried" }
+        {
+          "say": "tanvi",
+          "text": "साहिल के पास मेरा एक वीडियो है। उस दिन का, जब पापा से लड़ाई के बाद मैं कैंटीन के पीछे रो रही थी।",
+          "time": "1:08 AM",
+          "delay": 2400,
+          "emotion": "crying",
+          "voice_file": "audio/tanvi_2bda0ead8b00.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "वो कहता है कल लंच में कॉलेज ग्रुप पर डाल देगा, अगर मैंने उसकी बात नहीं मानी।",
+          "time": "1:08 AM",
+          "delay": 2000,
+          "emotion": "scared",
+          "voice_file": "audio/tanvi_f5566408b440.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "वो हमेशा कैंटीन में शेखी बघारता है। अगर कोई उसकी धमकी रिकॉर्ड कर ले… तो सबको सच पता चल जाएगा।",
+          "time": "1:09 AM",
+          "delay": 2200,
+          "emotion": "thinking",
+          "voice_file": "audio/tanvi_122cdf0727e7.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "कल लंच ब्रेक, कैंटीन। मुझे तुम्हारा साथ चाहिए… प्लीज़।",
+          "time": "1:10 AM",
+          "delay": 1800,
+          "emotion": "worried",
+          "voice_file": "audio/tanvi_1ab6ea73c18f.ogg"
+        }
       ],
       "prompt": "Tanvi ka plan: kal canteen mein Sahil ka sach.",
       "choice": [
-        { "text": "Pakka. Kal canteen mein. Sahil ko uski aukaat dikhayenge 🤝", "style": "confident", "score": 8, "effects": { "start_objective": "o3", "trust": 2 }, "goto": "s7_canteen",
-          "reaction": [ { "say": "tanvi", "text": "थैंक यू। गुड नाइट… और सॉरी।", "time": "1:11 AM", "delay": 1200, "emotion": "smile" } ] },
-        { "text": "Sochna padega. Kal dekhte hain.", "style": "timid", "score": 1, "effects": { "trust": -1 }, "goto": "s7_canteen",
-          "reaction": [ { "say": "tanvi", "text": "ठीक है… समझ सकती हूँ।", "time": "1:11 AM", "delay": 1200, "emotion": "sad" } ] }
+        {
+          "text": "Pakka. Kal canteen mein. Sahil ko uski aukaat dikhayenge 🤝",
+          "style": "confident",
+          "score": 8,
+          "effects": {
+            "start_objective": "o3",
+            "trust": 2
+          },
+          "goto": "s7_canteen",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "थैंक यू। गुड नाइट… और सॉरी।",
+              "time": "1:11 AM",
+              "delay": 1200,
+              "emotion": "smile",
+              "voice_file": "audio/tanvi_12c31cc6063b.ogg"
+            }
+          ]
+        },
+        {
+          "text": "Sochna padega. Kal dekhte hain.",
+          "style": "timid",
+          "score": 1,
+          "effects": {
+            "trust": -1
+          },
+          "goto": "s7_canteen",
+          "reaction": [
+            {
+              "say": "tanvi",
+              "text": "ठीक है… समझ सकती हूँ।",
+              "time": "1:11 AM",
+              "delay": 1200,
+              "emotion": "sad",
+              "voice_file": "audio/tanvi_41deb18eeb37.ogg"
+            }
+          ]
+        }
       ]
     },
-
     "s6_cold": {
-      "type": "chat", "with": "tanvi", "header": "Tanvi Oberoi", "time": "night", "music": "night_city",
+      "type": "chat",
+      "with": "tanvi",
+      "header": "Tanvi Oberoi",
+      "time": "night",
+      "music": "night_city",
       "steps": [
-        { "say": "tanvi", "text": "हाँ। मैं ये सुनने लायक ही हूँ।", "time": "1:07 AM", "delay": 1800, "emotion": "sad" },
-        { "say": "tanvi", "text": "साहिल मेरा एक वीडियो कल कॉलेज ग्रुप पर डालने वाला है। बस इतना बताना था।", "time": "1:08 AM", "delay": 2200, "emotion": "crying" }
+        {
+          "say": "tanvi",
+          "text": "हाँ। मैं ये सुनने लायक ही हूँ।",
+          "time": "1:07 AM",
+          "delay": 1800,
+          "emotion": "sad",
+          "voice_file": "audio/tanvi_6080ccd704ec.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "साहिल मेरा एक वीडियो कल कॉलेज ग्रुप पर डालने वाला है। बस इतना बताना था।",
+          "time": "1:08 AM",
+          "delay": 2200,
+          "emotion": "crying",
+          "voice_file": "audio/tanvi_90947ce6a005.ogg"
+        }
       ],
       "prompt": "Ek video… aur Sahil.",
       "choice": [
-        { "text": "Theek hai. Bolo, kya karna hai.", "style": "kind", "score": 6, "effects": { "trust": 3, "helped_tanvi": true }, "goto": "s6_help" },
-        { "text": "Tumhara kaam, tum jaano. Good night.", "style": "cold", "score": 4, "effects": { "power": 2, "trust": -2 }, "goto": "s7_canteen",
-          "reaction": [ { "narrate": "मैसेज 'Seen' हो जाता है। जवाब नहीं आता।" } ] }
+        {
+          "text": "Theek hai. Bolo, kya karna hai.",
+          "style": "kind",
+          "score": 6,
+          "effects": {
+            "trust": 3,
+            "helped_tanvi": true
+          },
+          "goto": "s6_help"
+        },
+        {
+          "text": "Tumhara kaam, tum jaano. Good night.",
+          "style": "cold",
+          "score": 4,
+          "effects": {
+            "power": 2,
+            "trust": -2
+          },
+          "goto": "s7_canteen",
+          "reaction": [
+            {
+              "narrate": "मैसेज 'Seen' हो जाता है। जवाब नहीं आता।",
+              "voice_file": "audio/narrator_09882af4e14e.ogg"
+            }
+          ]
+        }
       ]
     },
-
     "s6_ignored": {
-      "type": "chat", "with": "tanvi", "header": "Tanvi Oberoi", "time": "night", "music": "sad_piano",
+      "type": "chat",
+      "with": "tanvi",
+      "header": "Tanvi Oberoi",
+      "time": "night",
+      "music": "sad_piano",
       "steps": [
-        { "say": "tanvi", "text": "ठीक है।", "time": "1:12 AM", "delay": 1500, "emotion": "sad" },
-        { "narrate": "स्क्रीन बुझ जाती है। नींद नहीं आती, पर तुमने फ़ोन नहीं उठाया।" }
+        {
+          "say": "tanvi",
+          "text": "ठीक है।",
+          "time": "1:12 AM",
+          "delay": 1500,
+          "emotion": "sad",
+          "voice_file": "audio/tanvi_9916bbcbd944.ogg"
+        },
+        {
+          "narrate": "स्क्रीन बुझ जाती है। नींद नहीं आती, पर तुमने फ़ोन नहीं उठाया।",
+          "voice_file": "audio/narrator_a8e333623b8c.ogg"
+        }
       ],
       "next": "s7_canteen"
     },
-
     "s6_blocked": {
-      "type": "chat", "with": "tanvi", "header": "Tanvi Oberoi", "time": "night", "music": "tension",
+      "type": "chat",
+      "with": "tanvi",
+      "header": "Tanvi Oberoi",
+      "time": "night",
+      "music": "tension",
       "steps": [
-        { "narrate": "तुमने तन्वी को ब्लॉक कर दिया। अब कोई मैसेज नहीं आएगा।" },
-        { "narrate": "पर दो मिनट बाद एक नए नंबर से मैसेज आता है — साहिल।" },
-        { "say": "sahil", "text": "सुना है तन्वी ने तुझे भी मैसेज किया। कल कैंटीन आना, तुझे कुछ दिखाऊँगा। मज़ा आएगा।", "time": "1:15 AM", "delay": 2000, "emotion": "smug" }
+        {
+          "narrate": "तुमने तन्वी को ब्लॉक कर दिया। अब कोई मैसेज नहीं आएगा।",
+          "voice_file": "audio/narrator_fc96977b640a.ogg"
+        },
+        {
+          "narrate": "पर दो मिनट बाद एक नए नंबर से मैसेज आता है — साहिल।",
+          "voice_file": "audio/narrator_53e397a7e747.ogg"
+        },
+        {
+          "say": "sahil",
+          "text": "सुना है तन्वी ने तुझे भी मैसेज किया। कल कैंटीन आना, तुझे कुछ दिखाऊँगा। मज़ा आएगा।",
+          "time": "1:15 AM",
+          "delay": 2000,
+          "emotion": "smug",
+          "voice_file": "audio/sahil_c7b4612b99b8.ogg"
+        }
       ],
       "next": "s7_canteen"
     },
-
     "s7_canteen": {
-      "title": "Canteen ka Faisla", "type": "pov", "checkpoint": "Canteen ka faisla", "background": "cafe", "time": "day", "music": "tension",
-      "cast": [ { "id": "sahil", "at": 0.5 } ], "audience": 10,
+      "title": "Canteen ka Faisla",
+      "type": "pov",
+      "checkpoint": "Canteen ka faisla",
+      "background": "cafe",
+      "time": "day",
+      "music": "tension",
+      "cast": [
+        {
+          "id": "sahil",
+          "at": 0.5
+        }
+      ],
+      "audience": 10,
       "steps": [
-        { "narrate": "अगले दिन, लंच ब्रेक। कैंटीन खचाखच भरी है। साहिल बीच में खड़ा है, फ़ोन हवा में लहराते हुए।" },
-        { "prop": "phone", "char": "sahil", "anchor": "hand_r" },
-        { "say": "sahil", "text": "दोस्तों! लंच के साथ थोड़ा एंटरटेनमेंट हो जाए? तन्वी मैडम का स्पेशल वीडियो!", "emotion": "laugh", "move": "hold_phone" },
-        { "audience": "murmur" },
-        { "camera": { "zoom": 1.3, "focus": "sahil" } },
-        { "say": "sahil", "text": "ओह, तुम भी यहाँ हो? क्या इरादा है? तन्वी की तरफ़ से बोलना है, या मेरे साथ मज़े लेने हैं?", "emotion": "smug", "move": "point" },
-        { "if": "helped_tanvi == true",
-          "then": [ { "narrate": "तुम्हारी जेब में फ़ोन रिकॉर्डिंग पर है। साहिल की हर बात रिकॉर्ड हो रही है।" }, { "set": { "add_item": "proof_video" } } ],
-          "else": [ { "narrate": "भीड़ तुम्हारी तरफ़ देख रही है। फ़ैसला तुम्हारा है।" } ] }
+        {
+          "narrate": "अगले दिन, लंच ब्रेक। कैंटीन खचाखच भरी है। साहिल बीच में खड़ा है, फ़ोन हवा में लहराते हुए।",
+          "voice_file": "audio/narrator_01302a12fbaa.ogg"
+        },
+        {
+          "prop": "phone",
+          "char": "sahil",
+          "anchor": "hand_r"
+        },
+        {
+          "say": "sahil",
+          "text": "दोस्तों! लंच के साथ थोड़ा एंटरटेनमेंट हो जाए? तन्वी मैडम का स्पेशल वीडियो!",
+          "emotion": "laugh",
+          "move": "hold_phone",
+          "voice_file": "audio/sahil_ed9b159551ce.ogg"
+        },
+        {
+          "audience": "murmur"
+        },
+        {
+          "camera": {
+            "zoom": 1.3,
+            "focus": "sahil"
+          }
+        },
+        {
+          "say": "sahil",
+          "text": "ओह, तुम भी यहाँ हो? क्या इरादा है? तन्वी की तरफ़ से बोलना है, या मेरे साथ मज़े लेने हैं?",
+          "emotion": "smug",
+          "move": "point",
+          "voice_file": "audio/sahil_d087ca0b0592.ogg"
+        },
+        {
+          "if": "helped_tanvi == true",
+          "then": [
+            {
+              "narrate": "तुम्हारी जेब में फ़ोन रिकॉर्डिंग पर है। साहिल की हर बात रिकॉर्ड हो रही है।",
+              "voice_file": "audio/narrator_1e9df0759b78.ogg"
+            },
+            {
+              "set": {
+                "add_item": "proof_video"
+              }
+            }
+          ],
+          "else": [
+            {
+              "narrate": "भीड़ तुम्हारी तरफ़ देख रही है। फ़ैसला तुम्हारा है।",
+              "voice_file": "audio/narrator_512aaf04e121.ogg"
+            }
+          ]
+        }
       ],
       "prompt": "Ab power tumhare haath mein hai.",
       "choice": [
-        { "text": "Sabke saamne, Sahil — video delete karo. Tumhari dhamki record ho chuki hai.", "if": "has(proof_video)", "style": "confident", "score": 14, "effects": { "power": 4, "trust": 3, "complete_objective": "o3" }, "goto": "s8_end",
-          "reaction": [ { "emote": "sahil", "emotion": "shocked" }, { "say": "sahil", "text": "क… क्या? दे वो फ़ोन!", "emotion": "scared", "move": "step_back" }, { "audience": "cheer" }, { "camera": { "shake": 0.5 } } ] },
-        { "text": "Bas karo, Sahil. Kisi ka dard tamasha nahi hai.", "style": "kind", "score": 8, "effects": { "power": 2, "trust": 2 }, "goto": "s8_end",
-          "reaction": [ { "say": "sahil", "text": "ओहो, बड़ा संत! ठीक है… आज के लिए छोड़ देता हूँ।", "emotion": "angry", "move": "shrug" }, { "audience": "murmur" } ] },
-        { "text": "Video mujhe bhej. Tanvi ko ab main uski aukaat {m:dikhaunga|f:dikhaungi} 😈", "style": "rude", "score": 6, "effects": { "power": 6, "trust": -8, "revenge": true }, "goto": "s8_end",
-          "reaction": [ { "say": "sahil", "text": "हाहा! ये हुई ना बात। अब तुम भी हमारे लेवल के हो।", "emotion": "laugh", "move": "laugh" }, { "audience": "laugh" } ] },
-        { "text": "(Chup-chaap wahan se chale jao)", "style": "timid", "score": 0, "kind": "action", "effects": { "power": -2, "fail_objective": "o3" }, "goto": "s8_end",
-          "reaction": [ { "audience": "laugh" } ] }
+        {
+          "text": "Sabke saamne, Sahil — video delete karo. Tumhari dhamki record ho chuki hai.",
+          "if": "has(proof_video)",
+          "style": "confident",
+          "score": 14,
+          "effects": {
+            "power": 4,
+            "trust": 3,
+            "complete_objective": "o3"
+          },
+          "goto": "s8_end",
+          "reaction": [
+            {
+              "emote": "sahil",
+              "emotion": "shocked"
+            },
+            {
+              "say": "sahil",
+              "text": "क… क्या? दे वो फ़ोन!",
+              "emotion": "scared",
+              "move": "step_back",
+              "voice_file": "audio/sahil_aba9ef006132.ogg"
+            },
+            {
+              "audience": "cheer"
+            },
+            {
+              "camera": {
+                "shake": 0.5
+              }
+            }
+          ]
+        },
+        {
+          "text": "Bas karo, Sahil. Kisi ka dard tamasha nahi hai.",
+          "style": "kind",
+          "score": 8,
+          "effects": {
+            "power": 2,
+            "trust": 2
+          },
+          "goto": "s8_end",
+          "reaction": [
+            {
+              "say": "sahil",
+              "text": "ओहो, बड़ा संत! ठीक है… आज के लिए छोड़ देता हूँ।",
+              "emotion": "angry",
+              "move": "shrug",
+              "voice_file": "audio/sahil_0530c8e62b18.ogg"
+            },
+            {
+              "audience": "murmur"
+            }
+          ]
+        },
+        {
+          "text": "Video mujhe bhej. Tanvi ko ab main uski aukaat {m:dikhaunga|f:dikhaungi} 😈",
+          "style": "rude",
+          "score": 6,
+          "effects": {
+            "power": 6,
+            "trust": -8,
+            "revenge": true
+          },
+          "goto": "s8_end",
+          "reaction": [
+            {
+              "say": "sahil",
+              "text": "हाहा! ये हुई ना बात। अब तुम भी हमारे लेवल के हो।",
+              "emotion": "laugh",
+              "move": "laugh",
+              "voice_file": "audio/sahil_b5c16b5dd6cc.ogg"
+            },
+            {
+              "audience": "laugh"
+            }
+          ]
+        },
+        {
+          "text": "(Chup-chaap wahan se chale jao)",
+          "style": "timid",
+          "score": 0,
+          "kind": "action",
+          "effects": {
+            "power": -2,
+            "fail_objective": "o3"
+          },
+          "goto": "s8_end",
+          "reaction": [
+            {
+              "audience": "laugh"
+            }
+          ]
+        }
       ]
     },
-
     "s8_end": {
-      "title": "Nateeja", "background": "college_corridor", "time": "dusk", "music": "calm_campus",
-      "steps": [ { "narrate": "शाम ढल रही है। पूरा कॉलेज आज की बात कर रहा है — और तुम्हारी भी।" } ],
+      "title": "Nateeja",
+      "background": "college_corridor",
+      "time": "dusk",
+      "music": "calm_campus",
+      "steps": [
+        {
+          "narrate": "शाम ढल रही है। पूरा कॉलेज आज की बात कर रहा है — और तुम्हारी भी।",
+          "voice_file": "audio/narrator_8f09f5360b0f.ogg"
+        }
+      ],
       "resolve_ending": true
     },
-
     "e_good": {
-      "title": "Saath Khade", "ending": "good", "background": "library", "time": "dusk", "music": "romance",
-      "cast": [ { "id": "tanvi", "at": 0.6 } ],
+      "title": "Saath Khade",
+      "ending": "good",
+      "background": "library",
+      "time": "dusk",
+      "music": "romance",
+      "cast": [
+        {
+          "id": "tanvi",
+          "at": 0.6
+        }
+      ],
       "steps": [
-        { "enter": "tanvi", "at": 0.6, "from": "right" },
-        { "say": "tanvi", "text": "वीडियो डिलीट हो गया। साहिल को प्रिंसिपल ने बुलाया है। और ये सब… तुम्हारी वजह से।", "emotion": "happy", "move": "idle" },
-        { "say": "tanvi", "text": "पहले दिन मैंने तुम्हारी औकात पूछी थी ना? आज पता चल गई — मुझसे बहुत ऊपर।", "emotion": "blushing", "move": "look_down" },
-        { "say": "tanvi", "text": "कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ? इस बार कोई चैलेंज नहीं। बस… कॉफ़ी।", "emotion": "shy", "move": "wave" },
-        { "fx": { "sparkles": true } }
+        {
+          "enter": "tanvi",
+          "at": 0.6,
+          "from": "right"
+        },
+        {
+          "say": "tanvi",
+          "text": "वीडियो डिलीट हो गया। साहिल को प्रिंसिपल ने बुलाया है। और ये सब… तुम्हारी वजह से।",
+          "emotion": "happy",
+          "move": "idle",
+          "voice_file": "audio/tanvi_204766fc0718.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "पहले दिन मैंने तुम्हारी औकात पूछी थी ना? आज पता चल गई — मुझसे बहुत ऊपर।",
+          "emotion": "blushing",
+          "move": "look_down",
+          "voice_file": "audio/tanvi_fd08a64f3f73.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "कल शाम पाँच बजे, लाइब्रेरी की सीढ़ियाँ? इस बार कोई चैलेंज नहीं। बस… कॉफ़ी।",
+          "emotion": "shy",
+          "move": "wave",
+          "voice_file": "audio/tanvi_2fdc59aa7101.ogg"
+        },
+        {
+          "fx": {
+            "sparkles": true
+          }
+        }
       ]
     },
     "e_revenge": {
-      "title": "Ab Power Tumhare Paas", "ending": "revenge", "background": "college_corridor", "time": "night", "music": "tension",
-      "cast": [ { "id": "tanvi", "at": 0.66 } ],
+      "title": "Ab Power Tumhare Paas",
+      "ending": "revenge",
+      "background": "college_corridor",
+      "time": "night",
+      "music": "tension",
+      "cast": [
+        {
+          "id": "tanvi",
+          "at": 0.66
+        }
+      ],
       "steps": [
-        { "enter": "tanvi", "at": 0.66, "from": "right" },
-        { "say": "tanvi", "text": "तुम भी बिल्कुल साहिल जैसे ही हो।", "emotion": "crying", "move": "cry" },
-        { "say": "tanvi", "text": "पहले दिन मैंने तुम्हें नीचा दिखाया था। आज तुमने मुझे दिखा दिया कि नीचा क्या होता है।", "emotion": "sad", "move": "walk_away" },
-        { "exit": "tanvi", "to": "left" },
-        { "narrate": "अब पूरा कॉलेज तुमसे डरता है। तन्वी, साहिल, सब। अब पावर तुम्हारे पास है… पर कॉरिडोर बहुत ख़ाली लगता है।" }
+        {
+          "enter": "tanvi",
+          "at": 0.66,
+          "from": "right"
+        },
+        {
+          "say": "tanvi",
+          "text": "तुम भी बिल्कुल साहिल जैसे ही हो।",
+          "emotion": "crying",
+          "move": "cry",
+          "voice_file": "audio/tanvi_e280f4375869.ogg"
+        },
+        {
+          "say": "tanvi",
+          "text": "पहले दिन मैंने तुम्हें नीचा दिखाया था। आज तुमने मुझे दिखा दिया कि नीचा क्या होता है।",
+          "emotion": "sad",
+          "move": "walk_away",
+          "voice_file": "audio/tanvi_0bb05c99dda7.ogg"
+        },
+        {
+          "exit": "tanvi",
+          "to": "left"
+        },
+        {
+          "narrate": "अब पूरा कॉलेज तुमसे डरता है। तन्वी, साहिल, सब। अब पावर तुम्हारे पास है… पर कॉरिडोर बहुत ख़ाली लगता है।",
+          "voice_file": "audio/narrator_9ea5f6e4cb8a.ogg"
+        }
       ]
     },
     "e_friend": {
-      "title": "Meher Wala Rasta", "ending": "friend", "background": "cafe", "time": "dusk", "music": "upbeat",
-      "cast": [ { "id": "meher", "at": 0.6 } ],
+      "title": "Meher Wala Rasta",
+      "ending": "friend",
+      "background": "cafe",
+      "time": "dusk",
+      "music": "upbeat",
+      "cast": [
+        {
+          "id": "meher",
+          "at": 0.6
+        }
+      ],
       "steps": [
-        { "enter": "meher", "at": 0.6, "from": "left" },
-        { "say": "meher", "text": "तन्वी, साहिल, सबका ड्रामा अपनी जगह। पर हमारी कटिंग चाय अपनी जगह।", "emotion": "laugh", "move": "laugh" },
-        { "say": "meher", "text": "कल से नोट्स मेरे साथ बनाना। पहले सेमेस्टर में टॉप करवाती हूँ। डील?", "emotion": "smile", "move": "point" },
-        { "narrate": "कभी-कभी कॉलेज की सबसे अच्छी कहानी वो होती है जिसमें कोई क्वीन नहीं, बस एक सच्चा दोस्त होता है।" }
+        {
+          "enter": "meher",
+          "at": 0.6,
+          "from": "left"
+        },
+        {
+          "say": "meher",
+          "text": "तन्वी, साहिल, सबका ड्रामा अपनी जगह। पर हमारी कटिंग चाय अपनी जगह।",
+          "emotion": "laugh",
+          "move": "laugh",
+          "voice_file": "audio/meher_e65b18cd629b.ogg"
+        },
+        {
+          "say": "meher",
+          "text": "कल से नोट्स मेरे साथ बनाना। पहले सेमेस्टर में टॉप करवाती हूँ। डील?",
+          "emotion": "smile",
+          "move": "point",
+          "voice_file": "audio/meher_7ce0e411bea3.ogg"
+        },
+        {
+          "narrate": "कभी-कभी कॉलेज की सबसे अच्छी कहानी वो होती है जिसमें कोई क्वीन नहीं, बस एक सच्चा दोस्त होता है।",
+          "voice_file": "audio/narrator_d5ec55824013.ogg"
+        }
       ]
     },
     "e_lonely": {
-      "title": "Akela Fresher", "ending": "lonely", "background": "street", "time": "night", "weather": "rain", "music": "sad_piano",
+      "title": "Akela Fresher",
+      "ending": "lonely",
+      "background": "street",
+      "time": "night",
+      "weather": "rain",
+      "music": "sad_piano",
       "steps": [
-        { "narrate": "बारिश में घर का रास्ता। दिमाग़ में बस एक ही बात — हर बार चुप्पी, हर बार किनारा।" },
-        { "narrate": "किसी ने तुम्हारा नाम याद नहीं रखा। शायद अगली बार… जवाब देना।" }
+        {
+          "narrate": "बारिश में घर का रास्ता। दिमाग़ में बस एक ही बात — हर बार चुप्पी, हर बार किनारा।",
+          "voice_file": "audio/narrator_e3cd9e9157ba.ogg"
+        },
+        {
+          "narrate": "किसी ने तुम्हारा नाम याद नहीं रखा। शायद अगली बार… जवाब देना।",
+          "voice_file": "audio/narrator_e6cf0d974683.ogg"
+        }
       ]
     }
   },
   "endings": [
-    { "id": "good", "title": "Saath Khade", "if": "helped_tanvi == true and trust >= 8 and power >= 6", "scene": "e_good", "teaser": "Jab sach bolne ka waqt aaye…", "kind": "good" },
-    { "id": "revenge", "title": "Ab Power Tumhare Paas", "if": "revenge == true or (blocked_tanvi == true and power >= 6)", "scene": "e_revenge", "teaser": "Badla meetha hota hai. Hota hai na?", "kind": "revenge" },
-    { "id": "friend", "title": "Meher Wala Rasta", "if": "dosti >= 4", "scene": "e_friend", "teaser": "Har kahani mein queen zaroori nahi.", "kind": "secret" },
-    { "id": "lonely", "title": "Akela Fresher", "if": "true", "scene": "e_lonely", "teaser": "Chup rehna bhi ek jawab hai.", "kind": "bad" }
+    {
+      "id": "good",
+      "title": "Saath Khade",
+      "if": "helped_tanvi == true and trust >= 8 and power >= 6",
+      "scene": "e_good",
+      "teaser": "Jab sach bolne ka waqt aaye…",
+      "kind": "good"
+    },
+    {
+      "id": "revenge",
+      "title": "Ab Power Tumhare Paas",
+      "if": "revenge == true or (blocked_tanvi == true and power >= 6)",
+      "scene": "e_revenge",
+      "teaser": "Badla meetha hota hai. Hota hai na?",
+      "kind": "revenge"
+    },
+    {
+      "id": "friend",
+      "title": "Meher Wala Rasta",
+      "if": "dosti >= 4",
+      "scene": "e_friend",
+      "teaser": "Har kahani mein queen zaroori nahi.",
+      "kind": "secret"
+    },
+    {
+      "id": "lonely",
+      "title": "Akela Fresher",
+      "if": "true",
+      "scene": "e_lonely",
+      "teaser": "Chup rehna bhi ek jawab hai.",
+      "kind": "bad"
+    }
   ]
 }

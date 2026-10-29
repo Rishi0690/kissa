@@ -14,6 +14,6 @@ public class Paint {
   public Style getStyle() { return style; } public void setStyle(Style s) { style = s; }
   public boolean isAntiAlias() { return aa; } public void setAntiAlias(boolean b) { aa = b; }
   public boolean isFilterBitmap() { return filter; } public void setFilterBitmap(boolean b) { filter = b; }
-  public ColorFilter setColorFilter(ColorFilter f) { return f; } public PathEffect setPathEffect(PathEffect e) { return e; }
+  ColorFilter cf; public ColorFilter getColorFilter() { return cf; } public ColorFilter setColorFilter(ColorFilter f) { cf = f; return f; } public PathEffect setPathEffect(PathEffect e) { return e; }
   public Shader setShader(Shader s) { shader = s; return s; } public Xfermode setXfermode(Xfermode x) { return x; }
 }
