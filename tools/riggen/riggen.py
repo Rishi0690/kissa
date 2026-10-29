@@ -265,7 +265,7 @@ def build_faces(man):
             face = [(0, chin), (-w * 0.5, chin - 18), (-w * 0.9, -56), (-w, -120), (-w * 0.98, -192), (-w * 0.7, crown + 15), (0, crown), (w * 0.7, crown + 15), (w * 0.98, -192), (w, -120), (w * 0.9, -56), (w * 0.5, chin - 18)]
         ears = [(-w - 14, -112, 16, 26), (w + 14, -112, 16, 26)]
         m = cv.mask([face], ellipses=ears)
-        img = toon(cv, m, shade_off=8, light=(-1, -0.6))
+        img = toon(cv, m, base=238, shade=218, shade_off=5, light=(-1, -0.6))
         # ear inner lines
         img = lines(cv, img, [[(-w - 12, -126), (-w - 18, -110), (-w - 12, -96)], [(w + 12, -126), (w + 18, -110), (w + 12, -96)]], width=1.8, fill=140)
         # nose hint
@@ -349,6 +349,19 @@ def build_hair(man):
         front=[[(-W + 6, -120), (-W + 2, -180), (-60, cr - 4), (0, cr - 12), (60, cr - 4), (W - 2, -180), (W - 6, -120), (W - 24, -160), (20, -180), (-30, -176), (-W + 24, -160)],
                [(-36, cr - 4), (-40, cr - 40), (0, cr - 64), (40, cr - 40), (36, cr - 4)]],
         sh=[[(-40, -240), (12, -250), (52, -238), (24, -230)], [(-16, cr - 50), (12, cr - 56), (18, cr - 44)]])
+    def fringe(hem=-146, part=-18, side_bottom=40, scallop=10):
+        pts = [(-W - 2, -118), (-W - 8, -40), (-W + 2, side_bottom), (-W + 16, side_bottom - 30), (-W + 22, -120)]
+        xs = list(range(int(-W + 30), int(W - 29), 26))
+        for i, x in enumerate(xs):
+            dy = scallop if i % 2 == 0 else 0
+            if abs(x - part) < 16:
+                dy = -18
+            pts.append((x, hem + dy))
+        pts += [(W - 22, -120), (W - 16, side_bottom - 30), (W - 2, side_bottom), (W + 8, -40), (W + 2, -118), (W * 0.82, cr + 18), (W * 0.3, cr - 12), (0, cr - 16), (-W * 0.3, cr - 12), (-W * 0.82, cr + 18)]
+        return pts
+    styles["long_straight"]["front"] = [fringe(-148, -20, 60, 9)]
+    styles["long_wavy"]["front"] = [fringe(-150, 24, 70, 12)]
+    styles["bob"]["front"] = [fringe(-146, 0, 10, 8)]
     for name, st in styles.items():
         cv = Canvas(-W - 50, cr - 100, W + 60, 340)
         # keep side locks off the face: below the brow line, front hair may not cross the face outline

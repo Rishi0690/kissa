@@ -112,14 +112,14 @@ object StageRenderer {
             drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x22000000), Color(0x55000000)), startY = H * 0.35f, endY = H))
             val floorY = H * (if (pov) 0.80f else 0.95f)
             // actors live in camera space: 1.0 stage unit = 1.5 screen widths at zoom 1, centred on the camera focus
-            fun stageX(x: Float) = W / 2 + (x - cam) * W * 1.5f * zoom
+            fun stageX(x: Float) = W / 2 + (x - cam) * W * 1.75f * zoom
             // audience extras (smaller, dimmed, behind)
-            val exScale = H * (if (pov) 0.40f else 0.42f) * zoom / 1600f
-            val dim = Color(0.70f, 0.70f, 0.78f, 1f)
+            val exScale = H * (if (pov) 0.40f else 0.30f) * zoom / 1600f
+            val dim = Color(0.66f, 0.64f, 0.74f, 1f)
             with(rig) {
                 st.extras.sortedBy { it.x }.forEach { e ->
                     val px = if (pov) W * (0.04f + e.x * 0.92f) else W * (0.02f + e.x * 0.96f) + (0.5f - cam) * W * 0.4f
-                    drawActor(e, Offset(px, (if (pov) H * 0.62f else floorY - H * 0.36f)), exScale, dim)
+                    drawActor(e, Offset(px, (if (pov) H * 0.62f else floorY - H * 0.47f)), exScale, dim)
                 }
                 if (pov) {
                     // the facing character addresses the camera; the player is never drawn
@@ -130,7 +130,7 @@ object StageRenderer {
                         drawActor(a, Offset(px, H * 1.22f + (zoom - 1f) * H * 0.25f), scale)
                     }
                 } else {
-                    val scale = H * 0.80f * zoom / 1600f
+                    val scale = H * 0.66f * zoom / 1600f
                     val pelvisY = floorY - 780f * scale
                     st.player?.let { p -> drawActor(p, Offset(stageX(p.x), pelvisY), scale) }
                     st.actors.values.sortedBy { if (it.id == st.speaking) 1 else 0 }.forEach { a -> drawActor(a, Offset(stageX(a.x), pelvisY), scale) }

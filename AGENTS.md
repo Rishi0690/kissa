@@ -2,6 +2,15 @@
 
 Guide for AI coding agents (and humans) working on this repo. Read this before changing code.
 
+## v3.0.0 (2026-10-29) — spec v2.1 Phase 1 (read this first; older sections describe v2)
+- **What the app is now:** play-only, offline catalog of standalone story games (spec `notes/spec-v2.1-pdf.md`). No account, no API key, no live AI on the play path.
+- **Code map:** `game/` pure engine (GameModel §6 schema, Condition, IntentMatcher, GameEngine/GameSession, Validator + reachability, SaveStore, Catalog IDs) · `rig/` RigKit (rig.json + layer images), Moves (20 keyframe clips), RigRenderer (FK over the shared skeleton, multiply-tinted layers, vector face: 20 expressions, blink, lip-sync) · `play/` Stage (bg 3 layers, camera, audience, day/dusk/night/rain filters), GameController (beats → stage/chat/voice, waits at decisions/open replies), VoicePlayer (pack audio + envelope; phone TTS emergency fallback) · `data/` GameRepository (assets + CATALOG_URL packs), SocialStore, SettingsRepository · `ui/screens` catalog home, search, detail, role setup/customiser, library, settings, onboarding · `ui/play/PlayerScreen` cinematic / POV / chat surfaces, status sheet, ending screen with checkpoint replay.
+- **Content:** `app/src/main/assets/games/{aukaat,pehla-hafta,baarish-wali-raat}/` (game.json, voice_env.json, audio/*.ogg, cover.webp); `assets/rig/` (rig.json + 285 WebP parts); `assets/bg/` (10 × back/mid/front + backgrounds.json).
+- **Tools:** `tools/voicegen/voicegen.py` (voice_map.json slots → Edge neural; Sarvam shim dormant; hash cache in tools/voicegen/.cache, gitignored) · `tools/riggen/riggen.py` + `bggen.py` (regenerate rig kit / backgrounds; PNG mirror in ../art/v3/png for JVM previews) · `tools/preview/compose_previews.py` (preview mock-ups + sheet).
+- **Tests:** `./gradlew :app:testDebugUnitTest` (64 tests). Validator/reachability report → `app/build/reports/reachability.txt`. Renders: add `-Dshots=true -DpreviewOut=<dir>`.
+- **Adding a game:** write game.json using only catalog IDs (`game/Catalog.kt`), run voicegen, run tests (LaunchGamesTest validates every bundled game, 0 errors required, every ending reachable).
+- **Next phases:** `notes/phase-plan.md` (Phase 2 Cloudflare Worker + D1 + R2 backend; Phase 3 admin creator website).
+
 ## What Kissa is
 Kissa is an Android app for interactive 2D AI storytelling. The user enters an animated scene as their own character, types or speaks a line, hears it spoken, and watches an AI character listen, react (expression + gesture), and answer aloud. Stories branch, relationships develop, and progress persists.
 
