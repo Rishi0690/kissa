@@ -30,6 +30,8 @@ class VoicePlayer(private val ctx: Context, private val repo: GameRepository) {
     private var ttsSpeaking = false
     var volume = 1f
     var onFallback: ((String) -> Unit)? = null
+    /** v4: the cheap phone voice is off by default; a line without its pre-generated file is shown as text only. */
+    var phoneFallback = false
 
     private fun ensureTts() {
         if (tts != null) return
@@ -68,7 +70,8 @@ class VoicePlayer(private val ctx: Context, private val repo: GameRepository) {
             }
             if (ok) { done.await(); withContext(Dispatchers.Main) { player?.release(); player = null }; return true }
         }
-        // emergency fallback: phone TTS (flagged)
+        // emergency fallback: phone TTS (flagged) — only when the user enabled it in Settings
+        if (!phoneFallback) return false
         onFallback?.invoke(voiceFile ?: "(no voice file)")
         withContext(Dispatchers.Main) { ensureTts() }
         if (!ttsReady.await()) return false

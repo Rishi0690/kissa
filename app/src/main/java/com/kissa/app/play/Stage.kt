@@ -7,166 +7,258 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import com.kissa.app.game.Catalog
-import com.kissa.app.game.Look
 import com.kissa.app.game.SceneType
-import com.kissa.app.rig.Actor
-import com.kissa.app.rig.RigRenderer
 import kotlin.math.*
 import kotlin.random.Random
 
-/** Background layer images for one catalog background (back / mid / front). */
-class BgLayers(val back: ImageBitmap?, val mid: ImageBitmap?, val front: ImageBitmap?, val midTop: Float)
+/**
+ * One painted character on stage. Pure animation state (no Android): smooth position/alpha, idle breathing + sway,
+ * expression crossfade, natural blinking, lip-sync smoothing and short "move" gestures expressed as gentle whole-body
+ * motion (nod, laugh bounce, step back, shake…). Only the face patches ever change, so nothing can pop or misalign.
+ */
+class Performer(val id: String, val cast: CastSet?) {
+    var x = 0.5f; var targetX = 0.5f
+    var alpha = 0f; var targetAlpha = 1f
+    var enterDx = 0f
+    var facing = 1 // 1 = as painted, -1 = mirrored
+    var expr = "neutral"; private set
+    var prevExpr = "neutral"; private set
+    var exprBlend = 1f; private set
+    var mouth = 0f; private set
+    var blink = 0f; private set
+    var dim = 0f; var targetDim = 0f
+    var scale = 1f; var targetScale = 1f
+    private var phase = Random(id.hashCode()).nextFloat() * 10f
+    private var t = 0f
+    private var nextBlink = 1.5f + Random(id.hashCode() + 7).nextFloat() * 2f
+    private var blinkT = -1f
+    private var move: String? = null
+    private var moveT = 0f
+    var visible: Boolean get() = targetAlpha > 0f || alpha > 0.01f
+        set(v) { targetAlpha = if (v) 1f else 0f }
+
+    fun setEmotion(emotion: String?) {
+        val e = cast?.exprFor(emotion) ?: "neutral"
+        if (e == expr) return
+        prevExpr = if (exprBlend < 0.5f) prevExpr else expr
+        expr = e; exprBlend = 0f
+    }
+
+    fun play(m: String?) { if (m == null || m == "idle") return; move = m; moveT = 0f }
+
+    fun enterFrom(side: String, at: Float) {
+        x = at; targetX = at; alpha = 0f; targetAlpha = 1f
+        enterDx = when (side) { "left" -> -0.10f; "right" -> 0.10f; else -> 0f }
+    }
+
+    fun exitTo(side: String) { targetAlpha = 0f; enterDx = 0f; exitDx = when (side) { "left" -> -0.10f; else -> 0.10f } }
+    private var exitDx = 0f
+
+    /** [amp] = current voice amplitude 0..1 when this performer is the one speaking. */
+    fun update(dt: Float, amp: Float) {
+        t += dt
+        x += (targetX - x) * min(1f, dt * 3.2f)
+        alpha += (targetAlpha - alpha) * min(1f, dt * 4.5f)
+        enterDx *= max(0f, 1f - dt * 4.2f)
+        if (targetAlpha == 0f) enterDx += (exitDx - enterDx) * min(1f, dt * 3f)
+        dim += (targetDim - dim) * min(1f, dt * 5f)
+        scale += (targetScale - scale) * min(1f, dt * 4f)
+        exprBlend = min(1f, exprBlend + dt / 0.22f)
+        // lip-sync: fast attack, slower release, gated so tiny noise never flickers the mouth
+        val target = ((amp - 0.10f) / 0.45f).coerceIn(0f, 1f)
+        mouth += (target - mouth) * min(1f, dt * (if (target > mouth) 26f else 14f))
+        // blink: close 70 ms, hold 40 ms, open 90 ms; occasional double blink
+        if (blinkT < 0f) {
+            nextBlink -= dt
+            if (nextBlink <= 0f) { blinkT = 0f; nextBlink = 2.4f + Random.nextFloat() * 3.4f; if (Random.nextFloat() < 0.15f) nextBlink = 0.35f }
+        } else {
+            blinkT += dt
+            blink = when {
+                blinkT < 0.07f -> blinkT / 0.07f
+                blinkT < 0.11f -> 1f
+                blinkT < 0.20f -> 1f - (blinkT - 0.11f) / 0.09f
+                else -> { blinkT = -1f; 0f }
+            }
+        }
+        if (move != null) { moveT += dt; if (moveT > moveDuration(move!!)) move = null }
+    }
+
+    private fun moveDuration(m: String) = when (m) { "laugh", "cry", "shake_head" -> 0.9f; "nod" -> 0.6f; "step_back", "turn", "shrug" -> 0.7f; else -> 0.8f }
+
+    /** Body transform for this frame: dx/dy in sprite-height units, rotation in degrees, extra scale. */
+    data class Pose(val dx: Float, val dy: Float, val rot: Float, val sx: Float, val sy: Float)
+
+    fun pose(): Pose {
+        val breathe = sin((t + phase) * 2f * PI.toFloat() / 3.8f)
+        val sway = sin((t + phase) * 2f * PI.toFloat() / 6.4f)
+        var dx = enterDx + sway * 0.0025f
+        var dy = breathe * 0.0018f
+        var rot = sway * 0.35f
+        var sx = 1f; var sy = 1f + breathe * 0.004f
+        val m = move
+        if (m != null) {
+            val k = (moveT / moveDuration(m)).coerceIn(0f, 1f)
+            val env = sin(k * PI.toFloat())
+            when (m) {
+                "nod" -> dy += sin(k * 2 * PI.toFloat()) * 0.010f
+                "shake_head", "cry" -> dx += sin(k * 6 * PI.toFloat()) * 0.006f * env
+                "laugh" -> dy -= abs(sin(k * 3 * PI.toFloat())) * 0.012f * env
+                "step_back" -> { dx += 0.025f * env * facing; sx -= 0.02f * env; sy -= 0.02f * env }
+                "point", "hands_on_hips", "cross_arms", "wave" -> { rot += -1.2f * env * facing; dy -= 0.004f * env }
+                "look_down", "kneel", "sit" -> { dy += 0.012f * env; rot += 0.8f * env }
+                "shrug" -> dy -= 0.010f * env
+                "turn", "walk_away", "walk", "exit", "enter" -> dx += 0.015f * env
+                "hold_phone" -> rot += 0.6f * env
+            }
+        }
+        return Pose(dx, dy, rot, sx, sy)
+    }
+}
+
+/** Floating crowd reaction bubble (😂 😮 👏 …) for scenes with an audience. */
+class Reaction(val glyph: String, val x: Float, var age: Float = 0f)
 
 /**
- * Everything a cinematic or POV frame needs: layered background, actors (with the player's own rig in cinematic
- * scenes), audience extras, camera (zoom / focus / shake), time-of-day and weather filters, flash and sparkles.
- * Pure state + a DrawScope renderer so frames can be rendered headless in JVM tests.
+ * Everything a cinematic / POV frame needs: painted background (with time-of-day grade when no dedicated painting
+ * exists), performers, the player's own painted avatar (slides in when the player speaks in cinematic scenes),
+ * camera (zoom toward the speaker, shake), rain, flash, sparkles and crowd reactions. Pure state + DrawScope renderer.
  */
 class StageState {
     var type = SceneType.CINEMATIC
     var background = "college_corridor"
     var time = "day"
     var weather = "clear"
-    val actors = LinkedHashMap<String, Actor>()
-    var player: Actor? = null
-    val extras = ArrayList<Actor>()
+    val actors = LinkedHashMap<String, Performer>()
+    var player: Performer? = null
+    var audience = 0
     var zoom = 1f; var targetZoom = 1f
-    var focus = 0.5f; var targetFocus: Float? = null
+    var focus = 0.5f
     var focusActor: String? = null
+    var targetFocus: Float? = null
     var shake = 0f
     var flash = 0f
     var sparkles = 0f
     var clock = 0f
     var speaking: String? = null
+    val reactions = ArrayList<Reaction>()
+    private val rain = List(120) { floatArrayOf(Random.nextFloat(), Random.nextFloat(), 0.6f + Random.nextFloat() * 0.8f) }
 
     fun reset(type: SceneType, bg: String, time: String, weather: String) {
         this.type = type; background = bg; this.time = time; this.weather = weather
-        actors.clear(); extras.clear(); zoom = if (type == SceneType.POV) 1f else 1f; targetZoom = zoom; shake = 0f; flash = 0f; sparkles = 0f
-        focusActor = null; targetFocus = null
-    }
-
-    fun setAudience(n: Int, seed: Int) {
-        extras.clear()
-        val r = Random(seed)
-        repeat(n.coerceAtMost(10)) { i ->
-            val rig = if (r.nextBoolean()) "female" else "male"
-            val hairs = if (rig == "female") Catalog.hairs.take(6) else Catalog.hairs.drop(6)
-            val look = Look(skin = r.nextInt(5), hair = hairs[r.nextInt(hairs.size)], hairColor = Catalog.hairColors[r.nextInt(4)],
-                face = Catalog.faces[r.nextInt(3)], outfit = Catalog.outfits[r.nextInt(7)], outfitColor = Catalog.outfitColors[r.nextInt(Catalog.outfitColors.size)])
-            extras += Actor("extra$i", rig, look).apply {
-                x = 0.08f + (i.toFloat() / max(1, n - 1)) * 0.84f + (r.nextFloat() - 0.5f) * 0.05f
-                targetX = x; facing = if (x < 0.5f) 1 else -1; time = r.nextFloat() * 5f
-            }
-        }
+        actors.clear(); zoom = 1f; targetZoom = 1f; shake = 0f; flash = 0f; sparkles = 0f
+        focusActor = null; targetFocus = null; reactions.clear(); speaking = null
+        player?.visible = false
     }
 
     fun react(kind: String) {
-        val (expr, move) = when (kind) {
-            "laugh" -> "laugh" to "laugh"; "gasp" -> "shocked" to "step_back"; "cheer" -> "happy" to "wave"
-            "murmur" -> "thinking" to "look_down"; else -> "surprised" to "idle"
-        }
-        extras.forEachIndexed { i, e -> if (i % 2 == 0 || kind != "murmur") { e.expression = expr; e.play(move) } }
+        if (audience <= 0) return
+        val glyphs = when (kind) { "laugh" -> listOf("😂", "🤣", "😆"); "gasp" -> listOf("😮", "😱", "🫢"); "cheer" -> listOf("👏", "🔥", "🙌"); "boo" -> listOf("👎", "😤"); else -> listOf("👀", "🤔") }
+        repeat(min(6, 2 + audience / 3)) { i -> reactions += Reaction(glyphs[i % glyphs.size], if (i % 2 == 0) 0.06f + Random.nextFloat() * 0.18f else 0.76f + Random.nextFloat() * 0.18f, -i * 0.12f) }
     }
 
-    fun update(dt: Float) {
+    fun update(dt: Float, amp: Float) {
         clock += dt
-        actors.values.forEach { it.update(dt) }
-        player?.update(dt)
-        extras.forEach { it.update(dt) }
-        zoom += (targetZoom - zoom) * min(1f, dt * 3f)
-        val f = targetFocus ?: focusActor?.let { actors[it]?.x } ?: actors.values.filter { it.visible }.map { it.x }.takeIf { it.isNotEmpty() }?.let { xs ->
-            val all = xs + listOfNotNull(player?.takeIf { type == SceneType.CINEMATIC }?.x); (all.minOrNull()!! + all.maxOrNull()!!) / 2
-        } ?: 0.5f
-        focus += (f - focus) * min(1f, dt * 2.2f)
+        actors.values.forEach { it.update(dt, if (it.id == speaking) amp else 0f) }
+        player?.update(dt, 0f)
+        // the speaker is lit; others step back into soft shadow
+        val anySpeaker = speaking != null && actors.containsKey(speaking)
+        actors.values.forEach { a -> val lit = !anySpeaker || a.id == speaking; a.targetDim = if (lit) 0f else 0.38f; a.targetScale = if (lit) 1f else 0.965f }
+        zoom += (targetZoom - zoom) * min(1f, dt * 2.4f)
+        val f = targetFocus ?: focusActor?.let { actors[it]?.x } ?: actors.values.filter { it.targetAlpha > 0f }.map { it.x }.takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: 0.5f
+        focus += (f - focus) * min(1f, dt * 1.8f)
         shake = max(0f, shake - dt * 1.6f)
-        flash = max(0f, flash - dt * 2.5f)
-        sparkles = max(0f, sparkles - dt * 0.25f)
+        flash = max(0f, flash - dt * 2.2f)
+        sparkles = max(0f, sparkles - dt * 0.3f)
+        reactions.forEach { it.age += dt }; reactions.removeAll { it.age > 2.2f }
     }
+
+    fun rainDrops() = rain
 }
 
 object StageRenderer {
-    /** Draws one frame. [bg] is the background's layers; [rig] draws actors. */
-    fun DrawScope.drawStage(st: StageState, bg: BgLayers?, rig: RigRenderer) {
+    private val paint = Paint()
+
+    /** Draws one frame. [bg] painted background (may be null), [tinted] = true when it needs the time-of-day grade. */
+    fun DrawScope.drawStage(st: StageState, bg: ImageBitmap?, tinted: Boolean) {
         val W = size.width; val H = size.height
         val pov = st.type == SceneType.POV
-        val sx = if (st.shake > 0f) sin(st.clock * 70f) * st.shake * 18f else 0f
-        val sy = if (st.shake > 0f) cos(st.clock * 53f) * st.shake * 12f else 0f
-        val zoom = st.zoom
-        // background geometry: cover height, camera centred on focus
-        val imgW = 1280f; val imgH = 714f
-        val s = H / imgH * zoom * (if (pov) 1.08f else 1f)
-        val bgW = imgW * s; val bgH = imgH * s
-        val cam = st.focus.coerceIn(0f, 1f)
-        fun leftFor(par: Float): Float {
-            val visibleFrac = W / bgW
-            val c = cam.coerceIn(visibleFrac / 2, 1 - visibleFrac / 2)
-            return W / 2 - c * bgW * par + (par - 1f) * (bgW - W) * 0.5f * 0f
-        }
-        val top = H - bgH + (if (zoom > 1f) (bgH - H) * 0.35f else 0f)
+        val sx = if (st.shake > 0f) sin(st.clock * 70f) * st.shake * 16f else 0f
+        val sy = if (st.shake > 0f) cos(st.clock * 53f) * st.shake * 10f else 0f
+        val zoom = st.zoom * (if (pov) 1.06f else 1f)
         withTransform({ translate(sx, sy) }) {
-            bg?.back?.let { drawImg(it, Offset(leftFor(1f) + (cam - 0.5f) * 30f, top), Size(bgW, bgH)) }
-            bg?.mid?.let { m -> val mh = m.height * s; drawImg(m, Offset(leftFor(1f) - (cam - 0.5f) * 30f, top + bg.midTop * s), Size(bgW, mh)) }
-            if (bg?.back == null) drawRect(Brush.verticalGradient(listOf(Color(0xFF1C1830), Color(0xFF3A2E48))))
-            // depth haze so actors pop
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x22000000), Color(0x55000000)), startY = H * 0.35f, endY = H))
-            val floorY = H * (if (pov) 0.80f else 0.95f)
-            // actors live in camera space: 1.0 stage unit = 1.5 screen widths at zoom 1, centred on the camera focus
-            fun stageX(x: Float) = W / 2 + (x - cam) * W * 1.75f * zoom
-            // audience extras (smaller, dimmed, behind)
-            val exScale = H * (if (pov) 0.40f else 0.30f) * zoom / 1600f
-            val dim = Color(0.66f, 0.64f, 0.74f, 1f)
-            with(rig) {
-                st.extras.sortedBy { it.x }.forEach { e ->
-                    val px = if (pov) W * (0.04f + e.x * 0.92f) else W * (0.02f + e.x * 0.96f) + (0.5f - cam) * W * 0.4f
-                    drawActor(e, Offset(px, (if (pov) H * 0.62f else floorY - H * 0.47f)), exScale, dim)
-                }
-                if (pov) {
-                    // the facing character addresses the camera; the player is never drawn
-                    val a = st.actors.values.firstOrNull { it.visible }
-                    if (a != null) {
-                        val scale = H * 1.55f * zoom / 1600f
-                        val px = W / 2 + (a.x - 0.5f) * W * 0.6f
-                        drawActor(a, Offset(px, H * 1.22f + (zoom - 1f) * H * 0.25f), scale)
-                    }
-                } else {
-                    val scale = H * 0.66f * zoom / 1600f
-                    val pelvisY = floorY - 780f * scale
-                    st.player?.let { p -> drawActor(p, Offset(stageX(p.x), pelvisY), scale) }
-                    st.actors.values.sortedBy { if (it.id == st.speaking) 1 else 0 }.forEach { a -> drawActor(a, Offset(stageX(a.x), pelvisY), scale) }
-                }
+            // ---- background: cover-fit, gentle drift + parallax opposite to the camera focus
+            if (bg != null) {
+                val s = max(W / bg.width, H / bg.height) * (1.06f + (zoom - 1f) * 0.35f)
+                val dw = bg.width * s; val dh = bg.height * s
+                val drift = sin(st.clock * 0.05f) * 0.01f
+                val left = (W - dw) / 2 - (st.focus - 0.5f) * W * 0.06f + drift * W
+                val top = (H - dh) / 2 + (zoom - 1f) * H * 0.05f
+                drawImage(bg, IntOffset.Zero, IntSize(bg.width, bg.height), IntOffset(left.roundToInt(), top.roundToInt()), IntSize(dw.roundToInt(), dh.roundToInt()), filterQuality = FilterQuality.Medium)
+            } else drawRect(Brush.verticalGradient(listOf(Color(0xFF1C1830), Color(0xFF3A2E48))))
+            if (tinted) when (st.time) {
+                "dusk" -> drawRect(Color(0xFFFF8A4C), alpha = 0.18f, blendMode = BlendMode.Multiply)
+                "night" -> { drawRect(Color(0xFF1B2A55), alpha = 0.55f, blendMode = BlendMode.Multiply); drawRect(Color(0xFF000010), alpha = 0.18f) }
             }
-            bg?.front?.let { drawImg(it, Offset(leftFor(1f) - (cam - 0.5f) * 90f - 40f, top + 10f), Size(bgW + 80f, bgH)) }
-        }
-        // time-of-day / weather filters (no new artwork)
-        when (st.time) {
-            "night" -> { drawRect(Color(0xFF0A1030).copy(alpha = 0.42f)); drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0xAA05060F)), Offset(W / 2, H * 0.45f), max(W, H) * 0.75f)) }
-            "dusk" -> drawRect(Brush.verticalGradient(listOf(Color(0x55FF8A4C), Color(0x22B04AA0), Color(0x33201040))))
-        }
-        if (st.weather == "rain") {
-            drawRect(Color(0x33203048))
-            val r = Random(7)
-            repeat(140) {
-                val x0 = r.nextFloat() * W * 1.2f
-                val speed = 900f + r.nextFloat() * 700f
-                val y0 = ((r.nextFloat() * H + st.clock * speed) % (H + 80f)) - 40f
-                drawLine(Color(0x88C8D8F0), Offset(x0 - y0 * 0.18f, y0), Offset(x0 - y0 * 0.18f - 6f, y0 + 34f), 1.6f)
-            }
-        }
-        if (st.sparkles > 0f) {
-            val r = Random(3)
-            repeat(26) {
-                val x = r.nextFloat() * W; val y = r.nextFloat() * H * 0.8f
-                val tw = (sin(st.clock * 4f + it) * 0.5f + 0.5f) * st.sparkles.coerceAtMost(1f)
-                drawCircle(Color(0xFFFFF2C2).copy(alpha = tw), 3f + 5f * tw, Offset(x, y))
-            }
-        }
-        // cinematic vignette
-        drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0x99000000)), Offset(W / 2, H * 0.42f), max(W, H) * 0.85f))
-        if (st.flash > 0f) drawRect(Color.White.copy(alpha = st.flash.coerceAtMost(1f) * 0.8f))
-    }
+            if (st.weather == "rain") drawRect(Color(0xFF0A1424), alpha = 0.18f)
+            // soft vignette + floor shadow so characters sit in the scene
+            drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0x99000000)), center = Offset(W / 2, H * 0.45f), radius = max(W, H) * 0.75f))
+            drawRect(Brush.verticalGradient(0.62f to Color.Transparent, 1f to Color(0xB0000000)))
 
-    private fun DrawScope.drawImg(img: ImageBitmap, at: Offset, sz: Size) {
-        drawImage(img, IntOffset.Zero, IntSize(img.width, img.height), IntOffset(at.x.roundToInt(), at.y.roundToInt()), IntSize(sz.width.roundToInt(), sz.height.roundToInt()), filterQuality = FilterQuality.Medium)
+            // ---- characters: half-body paintings anchored to the bottom edge, camera zooms toward the speaker's head
+            val spriteH = H * (if (pov) 0.86f else 0.78f)
+            fun drawPerformer(p: Performer, xFrac: Float, extraScale: Float) {
+                val c = p.cast ?: return
+                val base = c.base ?: return
+                if (p.alpha < 0.01f) return
+                val pose = p.pose()
+                val sc = spriteH / c.h * extraScale * p.scale
+                val cx = W * (0.5f + (xFrac + pose.dx - 0.5f) * (if (pov) 0.9f else 1.18f))
+                val bottom = H + spriteH * 0.03f + pose.dy * spriteH
+                val dw = c.w * sc; val dh = c.h * sc
+                val left = cx - dw / 2; val top = bottom - dh
+                val cf = if (p.dim > 0.01f) ColorFilter.tint(Color(0f, 0f, 0.05f, p.dim), BlendMode.SrcAtop) else null
+                withTransform({
+                    rotate(pose.rot, Offset(cx, bottom))
+                    scale(pose.sx * p.facing, pose.sy, Offset(cx, bottom))
+                }) {
+                    fun img(b: ImageBitmap, r: Rect4?, a: Float) {
+                        val dx = left + (r?.x ?: 0) * sc; val dy = top + (r?.y ?: 0) * sc
+                        drawImage(b, IntOffset.Zero, IntSize(b.width, b.height), IntOffset(dx.roundToInt(), dy.roundToInt()),
+                            IntSize((b.width * sc).roundToInt(), (b.height * sc).roundToInt()), alpha = a * p.alpha, colorFilter = cf, filterQuality = FilterQuality.Medium)
+                    }
+                    img(base, null, 1f)
+                    // expression crossfade: previous face under, new face fading in (both over the unchanging body)
+                    val cur = p.expr; val prev = p.prevExpr
+                    if (p.exprBlend < 1f && prev != "neutral") c.face(prev)?.let { img(it, c.face, 1f) }
+                    if (cur != "neutral") c.face(cur)?.let { img(it, c.face, p.exprBlend) } else if (p.exprBlend < 1f && prev != "neutral") c.face(prev)?.let { img(it, c.face, 1f - p.exprBlend) }
+                    if (p.mouth > 0.02f) c.mouth(cur)?.let { m -> img(m, c.exprs[cur]?.mouth, p.mouth * p.exprBlend) }
+                    if (p.blink > 0.02f) c.blink(cur)?.let { b -> img(b, c.exprs[cur]?.blink, p.blink * p.exprBlend) }
+                }
+            }
+            // camera: scale around the focused performer's head
+            val fp = st.focusActor?.let { st.actors[it] }
+            val headY = fp?.cast?.let { H + spriteH * 0.03f - spriteH + it.headY / it.h * spriteH } ?: H * 0.42f
+            val pivotX = W * (0.5f + (st.focus - 0.5f) * 1.18f)
+            withTransform({ scale(zoom, zoom, Offset(pivotX, headY)) }) {
+                st.actors.values.filter { it.id != st.speaking }.forEach { drawPerformer(it, it.x, 1f) }
+                st.actors[st.speaking]?.let { drawPerformer(it, it.x, 1f) }
+            }
+            st.player?.let { p -> if (!pov) drawPerformer(p, p.x, 0.92f) }
+            // ---- weather / fx
+            if (st.weather == "rain") {
+                val t = st.clock
+                st.rainDrops().forEach { d ->
+                    val x = ((d[0] + t * 0.08f * d[2]) % 1f) * W
+                    val y = ((d[1] + t * 1.25f * d[2]) % 1f) * H
+                    drawLine(Color(0x88C8DCFF), Offset(x, y), Offset(x - 6f * d[2], y + 34f * d[2]), strokeWidth = 1.6f * d[2])
+                }
+            }
+            if (st.sparkles > 0f) repeat(26) { i ->
+                val r = Random(i * 31)
+                val x = r.nextFloat() * W; val y = ((r.nextFloat() - st.clock * 0.05f * (0.5f + r.nextFloat())) % 1f + 1f) % 1f * H
+                drawCircle(Color(0xFFFFE6A8), radius = 2f + 3f * abs(sin(st.clock * 3f + i)), center = Offset(x, y), alpha = min(1f, st.sparkles) * 0.8f)
+            }
+        }
+        if (st.flash > 0f) drawRect(Color.White, alpha = min(1f, st.flash))
     }
 }

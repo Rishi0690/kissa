@@ -25,7 +25,7 @@ class AiException(message: String, val kind: Kind, val retryable: Boolean) : Exc
 class GeminiClient(private val http: OkHttpClient = defaultHttp()) {
 
     companion object {
-        val MODELS = listOf("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-latest", "gemini-2.5-flash")
+        val MODELS = listOf("gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-latest")
         const val DEFAULT_MODEL = "gemini-3.5-flash-lite"
         private const val BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
         fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()

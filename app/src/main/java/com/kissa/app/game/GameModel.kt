@@ -30,6 +30,8 @@ data class Game(
     val scenes: Map<String, SceneDef>,
     val endings: List<EndingDef>,
     val raw: JsonObject,
+    /** v4 live play: tone of a free reply (kind/confident/funny/rude/timid/…) -> small stat nudges when no choice is pending. */
+    val toneEffects: Map<String, List<Effect>> = emptyMap(),
 ) {
     fun character(id: String?) = characters.firstOrNull { it.id == id }
     fun objective(id: String?) = objectives.firstOrNull { it.id == id }
@@ -79,7 +81,9 @@ data class Look(
 }
 
 data class VoiceProfile(val slot: String, val pitch: Double, val speed: Double, val extras: JsonObject?)
-data class CharacterDef(val id: String, val name: String, val nameHi: String?, val rig: String, val look: Look, val voice: VoiceProfile, val bio: String)
+data class CharacterDef(val id: String, val name: String, val nameHi: String?, val rig: String, val look: Look, val voice: VoiceProfile, val bio: String,
+                        /** v4 painted cast id (assets/cast/<art>/); defaults to the character id. */ val art: String = id,
+                        /** v4 personality + speaking style used by the live AI reply. */ val persona: String = "")
 
 data class ObjectiveDef(
     val id: String, val text: String, val place: String?, val deadline: String?, val givenBy: String?,
@@ -111,6 +115,8 @@ data class SceneDef(
     val next: String?,
     val resolveEnding: Boolean,
     val endingId: String?,
+    /** v4: short description of what is happening, given to the live AI. */
+    val ai: String? = null,
 )
 
 data class Choice(
@@ -233,6 +239,8 @@ object GameParser {
                 look = Look.parse(c.obj("look")),
                 voice = VoiceProfile(v?.str("slot") ?: "", v?.dbl("pitch") ?: 1.0, v?.dbl("speed") ?: 1.0, v?.obj("provider_extras")),
                 bio = c.str("bio") ?: "",
+                art = c.str("art") ?: c.str("id")!!,
+                persona = c.str("persona") ?: "",
             )
         } ?: emptyList()
         val objectives = o.arr("objectives")?.map { e ->
@@ -258,6 +266,7 @@ object GameParser {
             player = player, stats = stats, flags = flags, items = items, rank = rank, characters = chars, objectives = objectives,
             start = o.str("start") ?: scenes.keys.firstOrNull() ?: throw GameFormatException("start missing"),
             scenes = scenes, endings = endings, raw = o,
+            toneEffects = o.obj("live")?.obj("tone_effects")?.mapValues { (_, v) -> effects(v as? JsonObject, stats) } ?: emptyMap(),
         )
     }
 
@@ -284,6 +293,7 @@ object GameParser {
             checkpoint = s.str("checkpoint") ?: if (s.bool("checkpoint") == true) (s.str("title") ?: id) else null,
             steps = steps(s.arr("steps"), stats), choicePrompt = prompt ?: s.str("prompt"), choices = choices,
             next = s.str("next"), resolveEnding = s.bool("resolve_ending") ?: false, endingId = s.str("ending"),
+            ai = s.str("ai"),
         )
     }
 

@@ -202,13 +202,13 @@ class GameSession private constructor(val game: Game, val state: GameState, priv
     }
 
     /** Pick preset choice [index] (index into the scene's full choice list, as given in [Beat.Decision]). */
-    fun choose(index: Int): Outcome {
+    fun choose(index: Int, replacedSpeaker: String? = null): Outcome {
         val d = pending as? Beat.Decision ?: throw IllegalStateException("no decision pending")
         val c = d.choices.firstOrNull { it.index == index }?.value ?: throw IllegalArgumentException("choice $index not available")
         pending = null
         val o = apply(c.effects, c.style, c.score)
         frames.clear()
-        val after = ArrayList<Step>(c.reaction)
+        val after = ArrayList<Step>(dropLines(c.reaction, replacedSpeaker))
         after += if (c.goto != null) Step.Goto(c.goto) else Step.ResolveEnding()
         frames.addLast(Frame(after, 0, false))
         return o
@@ -221,26 +221,45 @@ class GameSession private constructor(val game: Game, val state: GameState, priv
         return if (m != null) replyIntent(m.index) else replyFallback()
     }
 
-    fun replyIntent(i: Int): Outcome {
+    fun replyIntent(i: Int, replacedSpeaker: String? = null): Outcome {
         val r = pending as? Beat.Reply ?: throw IllegalStateException("no open reply pending")
         val intent = r.step.intents[i]
         pending = null
         val o = apply(intent.effects, intent.style, intent.score).copy(intentId = intent.id)
-        val after = ArrayList<Step>(intent.reaction)
+        val after = ArrayList<Step>(dropLines(intent.reaction, replacedSpeaker))
         intent.goto?.let { after += Step.Goto(it) }
         frames.addLast(Frame(after, 0, false))
         return o
     }
 
-    fun replyFallback(): Outcome {
+    fun replyFallback(replacedSpeaker: String? = null): Outcome {
         val r = pending as? Beat.Reply ?: throw IllegalStateException("no open reply pending")
         pending = null
         val fb = r.step.fallback ?: Fallback(emptyList(), emptyList(), null)
         val o = apply(fb.effects, null, 0).copy(fallback = true)
-        val after = ArrayList<Step>(fb.reaction)
+        val after = ArrayList<Step>(dropLines(fb.reaction, replacedSpeaker))
         fb.goto?.let { after += Step.Goto(it) }
         frames.addLast(Frame(after, 0, false))
         return o
+    }
+
+    /**
+     * v4 live AI: when the character already answered the player's own words live, the scripted lines of that same
+     * character in the branch reaction are skipped (stage moves, other characters and effects still play).
+     */
+    private fun dropLines(steps: List<Step>, speaker: String?): List<Step> =
+        if (speaker == null) steps else steps.mapNotNull { st -> when {
+            st is Step.Say && st.char == speaker -> st.emotion?.let { Step.Emote(st.char, it) }
+            else -> st
+        } }
+
+    private val nudgedScenes = HashSet<String>()
+
+    /** v4 free reply outside a decision: the reply's tone nudges the game's tone stats, at most once per scene. */
+    fun nudge(tone: String): Outcome? {
+        val fx = game.toneEffects[tone] ?: return null
+        if (fx.isEmpty() || !nudgedScenes.add(state.sceneId)) return null
+        return apply(fx, tone, 0)
     }
 
     // ---------------- effects ----------------
